@@ -408,4 +408,54 @@ describe('any-input (raw) dialling', () => {
     const page = await fetch(h.base + '/');
     assert.doesNotMatch(page.headers.get('content-security-policy') ?? '', /script-src[^;]*unsafe-inline/);
   });
+
+  test('the stylesheet and bundled font are served with safe headers; the CSP allows own fonts only', async () => {
+    const css = await fetch(h.base + '/style.css');
+    assert.equal(css.status, 200);
+    assert.match(css.headers.get('content-type') ?? '', /^text\/css/);
+    assert.equal(css.headers.get('x-content-type-options'), 'nosniff');
+    const font = await fetch(h.base + '/fonts/bitcount-grid-single-latin.woff2');
+    assert.equal(font.status, 200);
+    assert.equal(font.headers.get('content-type'), 'font/woff2');
+    assert.equal(font.headers.get('x-content-type-options'), 'nosniff');
+    assert.ok((await font.arrayBuffer()).byteLength > 1000);
+    const licence = await fetch(h.base + '/fonts/OFL.txt');
+    assert.equal(licence.status, 200);
+    assert.match(licence.headers.get('content-type') ?? '', /^text\/plain/);
+    const csp = (await fetch(h.base + '/')).headers.get('content-security-policy') ?? '';
+    assert.match(csp, /font-src 'self'/);
+    assert.match(csp, /img-src data:;/); // the dot-matrix textures are inline SVG data URIs
+    assert.match(csp, /script-src 'self';/);
+  });
+
+  test('static routes are an allow-list: traversal and unknown files are refused', async () => {
+    const paths = [
+      '/fonts/../src/app.ts',
+      '/fonts/%2e%2e/src/app.ts',
+      '/fonts/..%2fsrc%2fapp.ts',
+      '/fonts/%2e%2e%2f%2e%2e%2fpackage.json',
+      '/fonts/',
+      '/fonts/other.woff2',
+      '/fonts/OFL.txt/',
+      '/public/style.css',
+      '/index.html.map',
+    ];
+    for (const p of paths) {
+      const res = await fetch(h.base + p);
+      const body = await res.text();
+      assert.notEqual(res.status, 200, p);
+      assert.doesNotMatch(body, /createServer|"name": "quick-dial-server"/, p);
+    }
+    // a raw, unnormalised request line cannot escape either
+    const status = await new Promise<number>((resolve, reject) => {
+      const req = request(h.base + '/', { path: '/fonts/../../package.json', headers: {} }, (res) => {
+        res.resume();
+        resolve(res.statusCode ?? 0);
+      });
+      req.on('error', reject);
+      req.end();
+    });
+    assert.notEqual(status, 200);
+    assert.equal((await fetch(h.base + '/style.css', { method: 'POST', headers: json, body: '{}' })).status, 404);
+  });
 });

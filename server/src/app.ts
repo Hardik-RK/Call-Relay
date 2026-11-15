@@ -8,6 +8,17 @@ import { MAX_DIAL_STRING, normalizePhone, validateDialString, type DialStringFai
 import { ONLINE_WINDOW_MS, Store, type Device } from './store.ts';
 
 const MAX_BODY_BYTES = 4096;
+
+/** The only static files the server will hand out. The request path is a key here, never part of a file path. */
+const STATIC_ASSETS: Record<string, { file: string; type: string; cache: string }> = {
+  '/style.css': { file: 'style.css', type: 'text/css; charset=utf-8', cache: 'no-store' },
+  '/fonts/bitcount-grid-single-latin.woff2': {
+    file: 'fonts/bitcount-grid-single-latin.woff2',
+    type: 'font/woff2',
+    cache: 'public, max-age=86400',
+  },
+  '/fonts/OFL.txt': { file: 'fonts/OFL.txt', type: 'text/plain; charset=utf-8', cache: 'public, max-age=86400' },
+};
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
 
 const FAILURE_TEXT: Record<PhoneFailure, string> = {
@@ -203,6 +214,15 @@ export function createApp(config: Config, options: AppOptions = {}): App {
     const path = url.pathname;
     const method = req.method ?? 'GET';
 
+    if ((method === 'GET' || method === 'HEAD') && Object.hasOwn(STATIC_ASSETS, path)) {
+      const asset = STATIC_ASSETS[path]!;
+      const body = await readFile(`${publicDir}${asset.file}`).catch(() => null);
+      if (body === null) throw new HttpError(404, 'not_found', 'Not found.');
+      res.writeHead(200, { 'content-type': asset.type, 'cache-control': asset.cache, 'x-content-type-options': 'nosniff' });
+      res.end(method === 'HEAD' ? undefined : body);
+      return;
+    }
+
     if (method === 'GET' && (path === '/' || path === '/index.html')) {
       const html = await readFile(`${publicDir}index.html`);
       res.writeHead(200, {
@@ -212,7 +232,7 @@ export function createApp(config: Config, options: AppOptions = {}): App {
         'x-frame-options': 'DENY',
         'referrer-policy': 'no-referrer',
         'content-security-policy':
-          "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+          "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
       });
       res.end(html);
       return;
