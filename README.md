@@ -14,6 +14,20 @@ It is a portfolio project, small on purpose. Read the [status](#status) section 
 
 More: [empty state](docs/screenshots/01-empty.png), [number preview](docs/screenshots/03-number-preview.png), [unpair confirmation](docs/screenshots/05-confirm-unpair.png), [error state](docs/screenshots/07-error-state.png), [mobile, full page](docs/screenshots/09-mobile-full.png), [mobile dark](docs/screenshots/10-mobile-dark.png).
 
+### Android app
+
+Light and dark follow the system. Captured from a debug build on an Android 34 emulator talking to a real local server.
+
+| Pair | Pair, code entered (dark) | Home (light) |
+| --- | --- | --- |
+| ![Pair screen, light](docs/screenshots/app-pair-light.png) | ![Pair screen, dark](docs/screenshots/app-pair-filled-dark.png) | ![Home with a number typed, light](docs/screenshots/app-home-filled-light.png) |
+
+| Home (dark) | Confirm (dark) | Confirm (light) |
+| --- | --- | --- |
+| ![Home, dark](docs/screenshots/app-home-dark.png) | ![Call this number, dark](docs/screenshots/app-confirm-dark.png) | ![Call this number, light](docs/screenshots/app-confirm-light.png) |
+
+More: [invalid server address](docs/screenshots/app-pair-invalid-dark.png), [server stopped state](docs/screenshots/app-home-stopped-dark.png), [reliability section, dark](docs/screenshots/app-home-bottom-dark.png) and [light](docs/screenshots/app-home-bottom-light.png). Design notes: [docs/ANDROID-DESIGN.md](docs/ANDROID-DESIGN.md).
+
 ## How it works
 
 ```mermaid
@@ -145,7 +159,7 @@ Short version: the phone receives commands reliably only while the foreground se
 | Suite | Command | Count |
 | --- | --- | --- |
 | Server (node:test): phone table, limiter, config, store, HTTP API | `cd server && npm test` | 132 |
-| Android (JUnit): shared phone table, command parser, server URL | `cd android && ./gradlew testDebugUnitTest` | 21 |
+| Android (JUnit): shared phone table, command parser, server URL, status mapping | `cd android && ./gradlew testDebugUnitTest` | 26 |
 
 CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) typechecks and tests the server, then runs Android unit tests, lint and `assembleDebug`, and uploads the debug APK.
 
@@ -169,8 +183,8 @@ Honest accounting as of the first commit series.
 | --- | --- |
 | Server API, pairing, rate limits, persistence | Implemented and covered by 132 passing tests. |
 | Web page | Implemented. Exercised in a real browser (Edge via Playwright) against the real server, using the scripted phone. Screenshots in `docs/screenshots/`. |
-| Android app | Compiles with AGP 8.13 and Kotlin 2.2. 21 JVM unit tests pass. `lintDebug` reports no errors. Debug APK builds. |
-| Android runtime behaviour | **Not run on any device or emulator.** The foreground service, the notification actions, the full-screen intent, runtime permissions and the real dialer hand-off are written against the documented Android behaviour but have not been seen working. Treat them as untested. |
+| Android app | Compiles with AGP 8.13 and Kotlin 2.2. 26 JVM unit tests pass. `lintDebug` reports no errors. Debug APK builds. The Compose UI is a small design system (`ui/Theme.kt`, `ui/Components.kt`, `ui/Screens.kt`) with bundled open-licence fonts. |
+| Android runtime behaviour | **Partly run, on one emulator (Android 34, x86_64) only.** Seen working: pairing against the real server, the foreground service polling and reconnecting, server-side revocation returning the app to the pair screen, a queued request opening the confirm dialog, the light and dark themes. **Not seen:** the Call hand-off to a real dialer, the CALL_PHONE and notification permission prompts, the notification actions, the full-screen intent, battery-optimisation behaviour, TalkBack, any physical phone. Treat those as untested. |
 | Plain HTTP only | No TLS in the server; see the safety notes. |
 | One process, in-memory limits | Fine for one person, not designed for multiple instances. |
 
