@@ -82,8 +82,8 @@ ok('447700900123', 'GB', '+447700900123');
 bad('0770090012', 'GB', 'too_short');
 
 // Australia
-ok('0412 345 678', 'AU', '+61412345678');
-ok('412345678', 'AU', '+61412345678');
+ok('0491 570 156', 'AU', '+61491570156');
+ok('491570156', 'AU', '+61491570156');
 bad('041234567', 'AU', 'too_short');
 
 fs.writeFileSync(path.join(__dirname, 'phone-cases.json'), JSON.stringify(c, null, 1) + '\n');
