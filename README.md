@@ -6,7 +6,13 @@ That is the whole product: a tiny Node server, one static page, and a small Kotl
 
 It is a portfolio project, small on purpose. Read the [status](#status) section before trusting it with anything important.
 
-![Web page with calls in every state](docs/screenshots/04-states-and-error.png)
+![Web page with calls in every state (light)](docs/screenshots/04-states-and-toast.png)
+
+| Pairing | Dark | Phone (375 px) |
+| --- | --- | --- |
+| ![Pairing code with countdown](docs/screenshots/02-pairing-code.png) | ![Dark theme](docs/screenshots/06-dark.png) | ![Mobile layout](docs/screenshots/08-mobile.png) |
+
+More: [empty state](docs/screenshots/01-empty.png), [number preview](docs/screenshots/03-number-preview.png), [unpair confirmation](docs/screenshots/05-confirm-unpair.png), [error state](docs/screenshots/07-error-state.png), [mobile, full page](docs/screenshots/09-mobile-full.png), [mobile dark](docs/screenshots/10-mobile-dark.png).
 
 ## How it works
 
