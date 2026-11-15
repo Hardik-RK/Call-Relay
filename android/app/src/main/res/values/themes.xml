@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.QuickDial" parent="android:Theme.DeviceDefault.NoActionBar" />
-    <color name="ic_launcher_background">#0B6B57</color>
+    <!-- Light by default; values-night swaps in the dark parent. Compose paints everything else. -->
+    <style name="Theme.QuickDial" parent="android:Theme.DeviceDefault.Light.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
+    <color name="ic_launcher_background">#0D6ABB</color>
+    <color name="window_background">#F1F2F4</color>
 </resources>

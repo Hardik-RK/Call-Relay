@@ -2,6 +2,7 @@ package dev.quickdial
 
 import android.Manifest
 import android.content.ActivityNotFoundException
+import android.content.ClipboardManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -10,31 +11,20 @@ import android.os.Bundle
 import android.provider.Settings as AndroidSettings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -42,13 +32,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import dev.quickdial.ui.ConfirmCallDialog
+import dev.quickdial.ui.HomeScreen
+import dev.quickdial.ui.PAIRING_CODE_LENGTH
+import dev.quickdial.ui.PairScreen
+import dev.quickdial.ui.Qd
+import dev.quickdial.ui.QdToastHost
+import dev.quickdial.ui.QuickDialTheme
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -71,14 +68,9 @@ class MainActivity : ComponentActivity() {
         setShowWhenLocked(true)
         setTurnScreenOn(true)
 
+        enableEdgeToEdge()
         setContent {
-            val dark = isSystemInDarkTheme()
-            MaterialTheme(
-                colorScheme = if (dark) darkColorScheme(primary = Color(0xFF3ECFA6), onPrimary = Color(0xFF04281F))
-                else lightColorScheme(primary = Color(0xFF0B6B57)),
-            ) {
-                Surface(Modifier.fillMaxSize()) { App() }
-            }
+            QuickDialTheme { App() }
         }
         if (savedInstanceState == null) handleIntent(intent)
     }
@@ -165,74 +157,59 @@ class MainActivity : ComponentActivity() {
         LaunchedEffect(status) { paired = settings.isPaired }
 
         val prompts by AppState.prompts.collectAsState()
-        Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Text("Quick Dial", style = MaterialTheme.typography.headlineMedium)
-            if (paired) HomeScreen(status, onUnpaired = { paired = false })
-            else PairScreen(onPaired = { paired = true })
+        val toasts = remember { SnackbarHostState() }
+        Box(Modifier.fillMaxSize().background(Qd.colors.base)) {
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .windowInsetsPadding(WindowInsets.safeDrawing)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            ) {
+                if (paired) HomeContent(status, toasts, onUnpaired = { paired = false })
+                else PairContent(onPaired = { paired = true })
+            }
+            QdToastHost(toasts, Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.safeDrawing))
         }
-        prompts.firstOrNull()?.let { cmd -> ConfirmDialog(cmd) }
-    }
-
-    @Composable
-    private fun ConfirmDialog(cmd: DialCommand) {
-        AlertDialog(
-            onDismissRequest = {},
-            title = { Text("Call this number?") },
-            text = { Text(cmd.number, style = MaterialTheme.typography.titleLarge) },
-            confirmButton = {
-                Button(onClick = {
+        prompts.firstOrNull()?.let { cmd ->
+            ConfirmCallDialog(
+                number = cmd.number,
+                exact = cmd.raw,
+                onCall = {
                     AppState.resolve(cmd.id)
                     startCall(cmd.id, cmd.number)
-                }) { Text("Call") }
-            },
-            dismissButton = {
-                TextButton(onClick = {
+                },
+                onDecline = {
                     AppState.resolve(cmd.id)
                     Reporter.report(this, cmd.id, "failed", "declined on phone")
-                }) { Text("Decline") }
-            },
-        )
+                },
+            )
+        }
     }
 
     @Composable
-    private fun PairScreen(onPaired: () -> Unit) {
-        var url by remember { mutableStateOf("") }
-        var code by remember { mutableStateOf("") }
+    private fun PairContent(onPaired: () -> Unit) {
+        var url by rememberSaveable { mutableStateOf("") }
+        var code by rememberSaveable { mutableStateOf("") }
         var error by remember { mutableStateOf<String?>(null) }
         var busy by remember { mutableStateOf(false) }
         val scope = rememberCoroutineScope()
 
-        Text(
-            "Open the web page, press \"Pair a phone\", then enter the server address and the code it shows.",
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        OutlinedTextField(
-            value = url, onValueChange = { url = it }, label = { Text("Server address") },
-            placeholder = { Text("192.168.1.20:8787") }, singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedTextField(
-            value = code, onValueChange = { code = it.uppercase() }, label = { Text("Pairing code") },
-            placeholder = { Text("ABCD-EFGH") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-        )
-        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        Button(
-            enabled = !busy && url.isNotBlank() && code.isNotBlank(),
-            modifier = Modifier.fillMaxWidth(),
-            onClick = {
+        PairScreen(
+            url = url, code = code, error = error, busy = busy,
+            onUrl = { url = it; error = null },
+            onCode = { code = it; error = null },
+            onPair = {
                 val base = ServerUrl.normalize(url)
                 if (base == null) {
                     error = "That does not look like a server address."
-                    return@Button
+                    return@PairScreen
                 }
                 busy = true
                 error = null
                 scope.launch {
-                    val result = withContext(Dispatchers.IO) { runCatching { Api(base).pair(code.trim()) } }
+                    val sent = if (code.length == PAIRING_CODE_LENGTH) code.take(4) + "-" + code.drop(4) else code
+                    val result = withContext(Dispatchers.IO) { runCatching { Api(base).pair(sent) } }
                     busy = false
                     result.onSuccess { token ->
                         settings.serverUrl = base
@@ -246,98 +223,58 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             },
-        ) { Text(if (busy) "Pairing..." else "Pair") }
+        )
     }
 
     @Composable
-    private fun HomeScreen(status: String, onUnpaired: () -> Unit) {
+    private fun HomeContent(status: String, toasts: SnackbarHostState, onUnpaired: () -> Unit) {
         var listening by remember { mutableStateOf(settings.listening) }
         var country by remember { mutableStateOf(settings.country) }
-        var number by remember { mutableStateOf("") }
-        var anyInput by remember { mutableStateOf(false) }
+        var number by rememberSaveable { mutableStateOf("") }
+        var anyInput by rememberSaveable { mutableStateOf(false) }
         val scope = rememberCoroutineScope()
-        val parsed = when {
-            number.isBlank() -> null
-            anyInput -> if (PhoneNumbers.isDialString(number)) PhoneResult.Ok(number.trim()) else PhoneResult.Failed(PhoneFailure.INVALID_CHARACTERS)
-            else -> PhoneNumbers.normalize(number, country)
-        }
 
         // Resume listening when the app is reopened (the service does not survive a reboot).
         LaunchedEffect(Unit) { if (settings.listening) PollService.start(this@MainActivity) }
 
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Paired with ${settings.serverUrl}", style = MaterialTheme.typography.bodyMedium)
-                Text(status, style = MaterialTheme.typography.titleMedium)
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                    Switch(checked = listening, onCheckedChange = { on ->
-                        listening = on
-                        settings.listening = on
-                        if (on) {
-                            askNotificationPermission()
-                            PollService.start(this@MainActivity)
-                        } else {
-                            PollService.stop(this@MainActivity)
-                            AppState.status.value = "Not listening"
-                        }
-                    })
-                    Text("Receive calls from the web page")
+        HomeScreen(
+            status = status,
+            serverUrl = settings.serverUrl.orEmpty(),
+            listening = listening,
+            country = country,
+            exactMode = anyInput,
+            number = number,
+            onListening = { on ->
+                listening = on
+                settings.listening = on
+                if (on) {
+                    askNotificationPermission()
+                    PollService.start(this@MainActivity)
+                } else {
+                    PollService.stop(this@MainActivity)
+                    AppState.status.value = "Not listening"
                 }
-            }
-        }
-
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Call a number", style = MaterialTheme.typography.titleMedium)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Country.entries.forEach { c ->
-                        FilterChip(selected = c == country, onClick = { country = c; settings.country = c }, label = { Text(c.code) })
-                    }
+            },
+            onCountry = { country = it; settings.country = it },
+            onExactMode = { anyInput = it },
+            onNumber = { number = it },
+            onPaste = {
+                val clip = getSystemService(ClipboardManager::class.java).primaryClip
+                val text = clip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this)?.toString().orEmpty()
+                val kept = text.filter { it.isDigit() || it in "+*#-(). " }.trim().take(PhoneNumbers.MAX_DIAL_STRING)
+                if (kept.isEmpty()) scope.launch { toasts.showSnackbar("Nothing to paste.") } else number = kept
+            },
+            onCall = { startCall(null, it) },
+            onBattery = { open(Intent(AndroidSettings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS), toasts, scope) },
+            onFullScreen = if (Build.VERSION.SDK_INT >= 34) {
+                {
+                    open(
+                        Intent(AndroidSettings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:$packageName")),
+                        toasts, scope,
+                    )
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                    Switch(checked = anyInput, onCheckedChange = { anyInput = it })
-                    Text("Dial exactly as typed (short codes, extensions, *#)")
-                }
-                OutlinedTextField(
-                    value = number, onValueChange = { number = it }, label = { Text(if (anyInput) "Dial string" else "Phone number") },
-                    singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = if (anyInput) KeyboardType.Text else KeyboardType.Phone),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                when (parsed) {
-                    is PhoneResult.Ok -> Text(if (anyInput) "Will dial exactly: ${parsed.e164}" else "Will dial ${parsed.e164}")
-                    is PhoneResult.Failed -> Text(describe(parsed.reason), color = MaterialTheme.colorScheme.error)
-                    null -> Text("Digits, spaces and dashes are fine.")
-                }
-                Button(
-                    enabled = parsed is PhoneResult.Ok,
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = { (parsed as? PhoneResult.Ok)?.let { startCall(null, it.e164) } },
-                ) { Text("Call") }
-            }
-        }
-
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Reliability", style = MaterialTheme.typography.titleMedium)
-                Text(
-                    "Android may stop the background connection to save battery. If calls from the web page " +
-                        "arrive late or not at all, allow this app to run unrestricted.",
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                OutlinedButton(onClick = { open(Intent(AndroidSettings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }) {
-                    Text("Battery settings")
-                }
-                if (Build.VERSION.SDK_INT >= 34) {
-                    OutlinedButton(onClick = {
-                        open(Intent(AndroidSettings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:$packageName")))
-                    }) { Text("Lock-screen prompt settings") }
-                }
-            }
-        }
-
-        OutlinedButton(
-            modifier = Modifier.fillMaxWidth(),
-            onClick = {
+            } else null,
+            onUnpair = {
                 scope.launch {
                     val url = settings.serverUrl
                     val token = settings.token
@@ -350,15 +287,7 @@ class MainActivity : ComponentActivity() {
                     onUnpaired()
                 }
             },
-        ) { Text("Unpair this phone") }
-    }
-
-    private fun describe(reason: PhoneFailure): String = when (reason) {
-        PhoneFailure.EMPTY -> "Enter a phone number."
-        PhoneFailure.INVALID_CHARACTERS -> "Use digits, spaces, dashes and an optional leading +."
-        PhoneFailure.TOO_SHORT -> "That number is too short."
-        PhoneFailure.TOO_LONG -> "That number is too long."
-        PhoneFailure.INVALID_FOR_COUNTRY -> "That does not look like a valid number for its country."
+        )
     }
 
     private fun askNotificationPermission() {
@@ -369,11 +298,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun open(intent: Intent) {
+    private fun open(intent: Intent, toasts: SnackbarHostState, scope: CoroutineScope) {
         try {
             startActivity(intent)
         } catch (_: ActivityNotFoundException) {
-            Toast.makeText(this, "This setting is not available on this phone.", Toast.LENGTH_SHORT).show()
+            scope.launch { toasts.showSnackbar("This setting is not available on this phone.") }
         }
     }
 }
