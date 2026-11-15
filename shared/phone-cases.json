@@ -1,0 +1,422 @@
+[
+ {
+  "input": "9123456789",
+  "country": "IN",
+  "e164": "+919123456789",
+  "note": "bare 10 digits"
+ },
+ {
+  "input": "91234 56789",
+  "country": "IN",
+  "e164": "+919123456789",
+  "note": "space grouping 5-5"
+ },
+ {
+  "input": "91234-56789",
+  "country": "IN",
+  "e164": "+919123456789",
+  "note": "dash"
+ },
+ {
+  "input": "  9123456789  ",
+  "country": "IN",
+  "e164": "+919123456789",
+  "note": "surrounding whitespace"
+ },
+ {
+  "input": "09123456789",
+  "country": "IN",
+  "e164": "+919123456789",
+  "note": "leading trunk 0"
+ },
+ {
+  "input": "0 91234 56789",
+  "country": "IN",
+  "e164": "+919123456789",
+  "note": "trunk 0 plus spaces"
+ },
+ {
+  "input": "+91 91234 56789",
+  "country": "IN",
+  "e164": "+919123456789",
+  "note": "plus 91 spaces"
+ },
+ {
+  "input": "+919123456789",
+  "country": "IN",
+  "e164": "+919123456789",
+  "note": "already e164"
+ },
+ {
+  "input": "919123456789",
+  "country": "IN",
+  "e164": "+919123456789",
+  "note": "91 prefix, no plus"
+ },
+ {
+  "input": "91 91234 56789",
+  "country": "IN",
+  "e164": "+919123456789",
+  "note": "91 prefix with spaces"
+ },
+ {
+  "input": "0919123456789",
+  "country": "IN",
+  "e164": "+919123456789",
+  "note": "0 then 91"
+ },
+ {
+  "input": "00919123456789",
+  "country": "IN",
+  "e164": "+919123456789",
+  "note": "00 international prefix"
+ },
+ {
+  "input": "+91-91234-56789",
+  "country": "IN",
+  "e164": "+919123456789",
+  "note": "plus 91 with dashes"
+ },
+ {
+  "input": "+91 (0) 91234 56789",
+  "country": "IN",
+  "e164": "+919123456789",
+  "note": "bracketed trunk zero"
+ },
+ {
+  "input": "(091) 234-56789",
+  "country": "IN",
+  "e164": "+919123456789",
+  "note": "mixed brackets and dash"
+ },
+ {
+  "input": "91.23.45.67.89",
+  "country": "IN",
+  "e164": "+919123456789",
+  "note": "dots"
+ },
+ {
+  "input": "9876543210",
+  "country": "IN",
+  "e164": "+919876543210",
+  "note": "starts with 98"
+ },
+ {
+  "input": "6000000001",
+  "country": "IN",
+  "e164": "+916000000001",
+  "note": "starts with 6"
+ },
+ {
+  "input": "7000000001",
+  "country": "IN",
+  "e164": "+917000000001",
+  "note": "starts with 7"
+ },
+ {
+  "input": "8000000001",
+  "country": "IN",
+  "e164": "+918000000001",
+  "note": "starts with 8"
+ },
+ {
+  "input": "9100000001",
+  "country": "IN",
+  "e164": "+919100000001",
+  "note": "10 digits starting with 91 is national, not a country code"
+ },
+ {
+  "input": "011 2345 6789",
+  "country": "IN",
+  "e164": "+911123456789",
+  "note": "landline with STD code 11"
+ },
+ {
+  "input": "080-2345-6789",
+  "country": "IN",
+  "e164": "+918023456789",
+  "note": "landline with STD code 80"
+ },
+ {
+  "input": "+91 11 2345 6789",
+  "country": "IN",
+  "e164": "+911123456789",
+  "note": "landline international"
+ },
+ {
+  "input": "",
+  "country": "IN",
+  "error": "empty",
+  "note": ""
+ },
+ {
+  "input": "   ",
+  "country": "IN",
+  "error": "empty",
+  "note": ""
+ },
+ {
+  "input": "912345678",
+  "country": "IN",
+  "error": "too_short",
+  "note": "9 digits"
+ },
+ {
+  "input": "91234567890",
+  "country": "IN",
+  "error": "too_long",
+  "note": "11 digits"
+ },
+ {
+  "input": "0912345678",
+  "country": "IN",
+  "error": "too_short",
+  "note": "trunk plus 9 digits"
+ },
+ {
+  "input": "00091234567890",
+  "country": "IN",
+  "error": "invalid_for_country",
+  "note": "000 prefix leaves a leading zero"
+ },
+ {
+  "input": "+91 912345678",
+  "country": "IN",
+  "error": "too_short",
+  "note": "plus 91 with 9 digits"
+ },
+ {
+  "input": "+91 91234567890",
+  "country": "IN",
+  "error": "too_long",
+  "note": "plus 91 with 11 digits"
+ },
+ {
+  "input": "+91 0123456789",
+  "country": "IN",
+  "error": "invalid_for_country",
+  "note": "national part starts with 0"
+ },
+ {
+  "input": "0000000000",
+  "country": "IN",
+  "error": "invalid_for_country",
+  "note": "all zero"
+ },
+ {
+  "input": "91234abc89",
+  "country": "IN",
+  "error": "invalid_characters",
+  "note": "letters"
+ },
+ {
+  "input": "9123456789x",
+  "country": "IN",
+  "error": "invalid_characters",
+  "note": "trailing letter"
+ },
+ {
+  "input": "+91 91234 56789 ext 4",
+  "country": "IN",
+  "error": "invalid_characters",
+  "note": "extension text"
+ },
+ {
+  "input": "91234 56789 #",
+  "country": "IN",
+  "error": "invalid_characters",
+  "note": "hash sign"
+ },
+ {
+  "input": "++919123456789",
+  "country": "IN",
+  "error": "invalid_characters",
+  "note": "double plus"
+ },
+ {
+  "input": "91+23456789",
+  "country": "IN",
+  "error": "invalid_characters",
+  "note": "plus in the middle"
+ },
+ {
+  "input": "+",
+  "country": "IN",
+  "error": "invalid_characters",
+  "note": "lone plus"
+ },
+ {
+  "input": "-----",
+  "country": "IN",
+  "error": "invalid_characters",
+  "note": "no digits"
+ },
+ {
+  "input": "(((",
+  "country": "IN",
+  "error": "invalid_characters",
+  "note": "no digits"
+ },
+ {
+  "input": "३१२३४५६७८९",
+  "country": "IN",
+  "error": "invalid_characters",
+  "note": "Devanagari digits are not accepted"
+ },
+ {
+  "input": "1222222222222222222222222222222222222222222222222222222222222",
+  "country": "IN",
+  "error": "invalid_characters",
+  "note": "absurdly long"
+ },
+ {
+  "input": "+1 202 555 0143",
+  "country": "IN",
+  "e164": "+12025550143",
+  "note": "US number, fictional 555-01xx range"
+ },
+ {
+  "input": "+44 20 7946 0958",
+  "country": "IN",
+  "e164": "+442079460958",
+  "note": "UK landline, fictional Ofcom range"
+ },
+ {
+  "input": "+44 (0)20 7946 0958",
+  "country": "IN",
+  "e164": "+442079460958",
+  "note": "UK with bracketed trunk"
+ },
+ {
+  "input": "+4915112345678",
+  "country": "IN",
+  "e164": "+4915112345678",
+  "note": "country not in the table: generic E.164 rules"
+ },
+ {
+  "input": "+4915",
+  "country": "IN",
+  "error": "too_short",
+  "note": "unknown country, too short"
+ },
+ {
+  "input": "+1234567890123456",
+  "country": "IN",
+  "error": "too_long",
+  "note": "16 digits"
+ },
+ {
+  "input": "+0 123 456 789",
+  "country": "IN",
+  "error": "invalid_for_country",
+  "note": "country code cannot start with 0"
+ },
+ {
+  "input": "2025550143",
+  "country": "US",
+  "e164": "+12025550143",
+  "note": ""
+ },
+ {
+  "input": "(202) 555-0143",
+  "country": "US",
+  "e164": "+12025550143",
+  "note": ""
+ },
+ {
+  "input": "202.555.0143",
+  "country": "US",
+  "e164": "+12025550143",
+  "note": ""
+ },
+ {
+  "input": "1 202 555 0143",
+  "country": "US",
+  "e164": "+12025550143",
+  "note": ""
+ },
+ {
+  "input": "+1-202-555-0143",
+  "country": "US",
+  "e164": "+12025550143",
+  "note": ""
+ },
+ {
+  "input": "001 202 555 0143",
+  "country": "US",
+  "e164": "+12025550143",
+  "note": ""
+ },
+ {
+  "input": "+91 91234 56789",
+  "country": "US",
+  "e164": "+919123456789",
+  "note": "Indian number typed with plus under US default"
+ },
+ {
+  "input": "1025550143",
+  "country": "US",
+  "error": "invalid_for_country",
+  "note": "area code starts with 1"
+ },
+ {
+  "input": "2020550143",
+  "country": "US",
+  "error": "invalid_for_country",
+  "note": "exchange starts with 0"
+ },
+ {
+  "input": "202555014",
+  "country": "US",
+  "error": "too_short",
+  "note": "9 digits"
+ },
+ {
+  "input": "020 7946 0958",
+  "country": "GB",
+  "e164": "+442079460958",
+  "note": ""
+ },
+ {
+  "input": "07700 900123",
+  "country": "GB",
+  "e164": "+447700900123",
+  "note": ""
+ },
+ {
+  "input": "+44 7700 900123",
+  "country": "GB",
+  "e164": "+447700900123",
+  "note": ""
+ },
+ {
+  "input": "447700900123",
+  "country": "GB",
+  "e164": "+447700900123",
+  "note": ""
+ },
+ {
+  "input": "0770090012",
+  "country": "GB",
+  "error": "too_short",
+  "note": ""
+ },
+ {
+  "input": "0412 345 678",
+  "country": "AU",
+  "e164": "+61412345678",
+  "note": ""
+ },
+ {
+  "input": "412345678",
+  "country": "AU",
+  "e164": "+61412345678",
+  "note": ""
+ },
+ {
+  "input": "041234567",
+  "country": "AU",
+  "error": "too_short",
+  "note": ""
+ }
+]
