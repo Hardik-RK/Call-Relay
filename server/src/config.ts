@@ -4,7 +4,7 @@ export interface Config {
   host: string;
   port: number;
   defaultCountry: CountryCode;
-  /** Shared secret for the web page; required when not bound to loopback. */
+  /** Optional shared secret for the web page. When null the page is open to whoever can reach it. */
   accessKey: string | null;
   /** Host header values (without port) accepted in addition to loopback names. */
   allowedHosts: string[];
@@ -35,12 +35,9 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
   if (accessKey !== null && accessKey.length < 12) {
     throw new Error('ACCESS_KEY must be at least 12 characters.');
   }
-  if (!isLoopbackBind(host) && accessKey === null) {
-    throw new Error(
-      `HOST=${host} exposes the server beyond this machine, so ACCESS_KEY is required. ` +
-        'Anyone who can reach the port could otherwise make the paired phone dial numbers.',
-    );
-  }
+  // No key is needed even beyond loopback: every call still has to be confirmed with a tap on the
+  // phone, so an open page can at worst make the phone show prompts (rate limited). Set ACCESS_KEY
+  // to lock the web page anyway, e.g. on a network you do not trust.
 
   const ttl = Number(env.COMMAND_TTL_SECONDS?.trim() || '120');
   if (!Number.isFinite(ttl) || ttl < 5) throw new Error('COMMAND_TTL_SECONDS must be a number >= 5');

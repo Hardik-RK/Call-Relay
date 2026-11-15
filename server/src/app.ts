@@ -97,7 +97,10 @@ export function createApp(config: Config, options: AppOptions = {}): App {
   function checkHost(req: IncomingMessage): string {
     const raw = (req.headers.host ?? '').toLowerCase();
     const host = raw.startsWith('[') ? raw.slice(0, raw.indexOf(']') + 1) : raw.split(':')[0]!;
-    if (!LOOPBACK_HOSTS.has(host) && !config.allowedHosts.includes(host)) {
+    // An IP address as the Host cannot be a DNS-rebinding attack (that needs a hostile *name*), so any
+    // IP works. That keeps the page reachable on a LAN or tailnet whose address changes.
+    const isIp = /^\d{1,3}(\.\d{1,3}){3}$/.test(host) || host.startsWith('[');
+    if (!LOOPBACK_HOSTS.has(host) && !isIp && !config.allowedHosts.includes(host)) {
       // Blocks DNS-rebinding: a hostile page cannot reach us under a name we did not expect.
       throw new HttpError(421, 'bad_host', 'Unexpected Host header. Add it to ALLOWED_HOSTS if intended.');
     }

@@ -10,9 +10,9 @@ test('defaults are local-only and need no key', () => {
   assert.equal(c.accessKey, null);
 });
 
-test('binding beyond loopback without ACCESS_KEY is refused', () => {
-  assert.throws(() => loadConfig({ HOST: '0.0.0.0' }), /ACCESS_KEY is required/);
-  assert.throws(() => loadConfig({ HOST: '100.64.0.1' }), /ACCESS_KEY is required/);
+test('binding beyond loopback works without ACCESS_KEY (the phone confirms every call)', () => {
+  assert.equal(loadConfig({ HOST: '0.0.0.0' }).accessKey, null);
+  assert.equal(loadConfig({ HOST: '100.64.0.1' }).accessKey, null);
 });
 
 test('non-loopback bind works with a key', () => {
