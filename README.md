@@ -55,6 +55,10 @@ Call states shown on the page:
 
 The phone never dials without a tap. That is deliberate: anything that can make your phone place calls remotely is an attractive target (premium-rate numbers), so a human confirmation is the last line of defence.
 
+## Dialling anything: the "exactly as typed" option
+
+Tick **Dial exactly as typed** on the web page (or the switch on the phone's own screen) and the text is sent to the phone untouched: short codes like `112`, `*#06#`, extensions, pauses (`,`) and so on, up to 32 characters. Only empty text, over-long text and control or invisible characters are refused. The phone still asks you to confirm before dialling, and the call list marks these as "as typed". Mind that some codes (USSD, call forwarding such as `*21*…#`) change settings on your line when dialled.
+
 ## Run it
 
 Requirements: Node 22.18 or newer (24 recommended). Nothing else for the server.
@@ -62,7 +66,7 @@ Requirements: Node 22.18 or newer (24 recommended). Nothing else for the server.
 ```bash
 cd server
 npm install        # dev dependencies only: typescript and @types/node
-npm start          # http://127.0.0.1:8787
+npm start          # builds the page script, then serves http://127.0.0.1:8787
 ```
 
 Open http://127.0.0.1:8787, press **Pair a phone**, and enter the code in the Android app.
@@ -89,7 +93,7 @@ On the Android emulator, the host machine is `10.0.2.2`, so use `10.0.2.2:8787` 
 
 ## Phone numbers
 
-The server is the authority and the Android app has a twin implementation. Both are checked against one shared table, [`shared/phone-cases.json`](shared/phone-cases.json) (70 cases, more than half Indian). Accepted inputs for an Indian default include `9123456789`, `091234 56789`, `+91 91234-56789`, `919123456789`, `0091…`, `+91 (0) 91234 56789` and landlines like `011 2345 6789`; all become `+919123456789`. Letters, extensions, wrong lengths, a leading zero after the country code and other junk are rejected with a specific reason.
+The server is the authority and the Android app has a twin implementation. Both are checked against one shared table, [`shared/phone-cases.json`](shared/phone-cases.json) (72 cases, more than half Indian). The Indian numbers in that table are drawn at random each time it is regenerated (`node shared/make-cases.cjs`, or `SEED=<n>` to reproduce), and the unit tests also draw fresh random numbers every run, so no fixed number appears in the test code. Accepted inputs for an Indian default include a bare 10 digits, a leading trunk `0`, `+91` with spaces or dashes, `91…`, `0091…`, `+91 (0) …` and landlines like `011 xxxx xxxx`; all become the same `+91…` number. Letters, extensions, wrong lengths, a leading zero after the country code and other junk are rejected with a specific reason.
 
 Supported default countries: IN, US, GB, AU. A `+` number from any other country is accepted if it is the right shape for E.164 (8 to 15 digits). That is a length check, not a carrier lookup. A number that passes can still not exist.
 
@@ -134,15 +138,15 @@ Short version: the phone receives commands reliably only while the foreground se
 
 | Suite | Command | Count |
 | --- | --- | --- |
-| Server (node:test): phone table, limiter, config, store, HTTP API | `cd server && npm test` | 121 |
-| Android (JUnit): shared phone table, command parser, server URL | `cd android && ./gradlew testDebugUnitTest` | 17 |
+| Server (node:test): phone table, limiter, config, store, HTTP API | `cd server && npm test` | 132 |
+| Android (JUnit): shared phone table, command parser, server URL | `cd android && ./gradlew testDebugUnitTest` | 21 |
 
 CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) typechecks and tests the server, then runs Android unit tests, lint and `assembleDebug`, and uploads the debug APK.
 
 ## Layout
 
 ```
-server/            Node + TypeScript API and the static page (server/public/index.html)
+server/            Node + TypeScript API and the page (server/public/index.html plus server/web/app.ts, compiled to public/app.js by `npm run build:web`)
   src/             phone.ts, store.ts, limiter.ts, config.ts, app.ts, server.ts
   test/            node:test suites
   scripts/         fake-phone.ts, a stand-in for the Android app
@@ -157,16 +161,16 @@ Honest accounting as of the first commit series.
 
 | Part | State |
 | --- | --- |
-| Server API, pairing, rate limits, persistence | Implemented and covered by 121 passing tests. |
+| Server API, pairing, rate limits, persistence | Implemented and covered by 132 passing tests. |
 | Web page | Implemented. Exercised in a real browser (Edge via Playwright) against the real server, using the scripted phone. Screenshots in `docs/screenshots/`. |
-| Android app | Compiles with AGP 8.13 and Kotlin 2.2. 17 JVM unit tests pass. `lintDebug` reports no errors. Debug APK builds. |
+| Android app | Compiles with AGP 8.13 and Kotlin 2.2. 21 JVM unit tests pass. `lintDebug` reports no errors. Debug APK builds. |
 | Android runtime behaviour | **Not run on any device or emulator.** The foreground service, the notification actions, the full-screen intent, runtime permissions and the real dialer hand-off are written against the documented Android behaviour but have not been seen working. Treat them as untested. |
 | Plain HTTP only | No TLS in the server; see the safety notes. |
 | One process, in-memory limits | Fine for one person, not designed for multiple instances. |
 
 Known gaps and trade-offs, by choice:
 
-- The web page is plain JavaScript inside one HTML file, not compiled TypeScript. The server is TypeScript.
+- The web page script is TypeScript too (`server/web/app.ts`), compiled with `tsc` on `npm start` and `npm test`.
 - The device token is stored in ordinary private app storage, not the Keystore.
 - Cleartext HTTP is allowed in the app because LAN and private-network addresses rarely have certificates.
 - No boot receiver. After a reboot open the app once to resume listening.

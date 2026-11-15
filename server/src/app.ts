@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { Config } from './config.ts';
 import { RateLimiter } from './limiter.ts';
-import { normalizePhone, type PhoneFailure } from './phone.ts';
+import { MAX_DIAL_STRING, normalizePhone, validateDialString, type DialStringFailure, type PhoneFailure } from './phone.ts';
 import { ONLINE_WINDOW_MS, Store, type Device } from './store.ts';
 
 const MAX_BODY_BYTES = 4096;
@@ -16,6 +16,12 @@ const FAILURE_TEXT: Record<PhoneFailure, string> = {
   too_short: 'That number is too short.',
   too_long: 'That number is too long.',
   invalid_for_country: 'That does not look like a valid number for its country.',
+};
+
+const DIAL_FAILURE_TEXT: Record<DialStringFailure, string> = {
+  empty: 'Enter something to dial.',
+  too_long: `That is too long (at most ${MAX_DIAL_STRING} characters).`,
+  invalid_characters: 'That contains characters a phone cannot dial.',
 };
 
 class HttpError extends Error {
@@ -203,9 +209,17 @@ export function createApp(config: Config, options: AppOptions = {}): App {
         'x-frame-options': 'DENY',
         'referrer-policy': 'no-referrer',
         'content-security-policy':
-          "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+          "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
       });
       res.end(html);
+      return;
+    }
+
+    if (method === 'GET' && path === '/app.js') {
+      const js = await readFile(`${publicDir}app.js`).catch(() => null);
+      if (js === null) throw new HttpError(404, 'not_found', 'app.js is missing. Run npm run build:web.');
+      res.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' });
+      res.end(js);
       return;
     }
 
@@ -245,7 +259,13 @@ export function createApp(config: Config, options: AppOptions = {}): App {
         commands = res.destroyed ? [] : store.takeQueued(device.id);
       }
       return send(res, 200, {
-        commands: commands.map((c) => ({ id: c.id, type: 'dial', number: c.number, createdAt: c.createdAt })),
+        commands: commands.map((c) => ({
+          id: c.id,
+          type: 'dial',
+          number: c.number,
+          ...(c.raw ? { raw: true } : {}),
+          createdAt: c.createdAt,
+        })),
       });
     }
 
@@ -284,6 +304,10 @@ export function createApp(config: Config, options: AppOptions = {}): App {
       }
 
       if (path === '/api/normalize' && method === 'GET') {
+        if (url.searchParams.get('raw') === '1') {
+          const d = validateDialString(url.searchParams.get('number') ?? '');
+          return send(res, 200, d.ok ? d : { ok: false, reason: d.reason, message: DIAL_FAILURE_TEXT[d.reason] });
+        }
         const r = normalizePhone(url.searchParams.get('number') ?? '', config.defaultCountry);
         return send(res, 200, r.ok ? r : { ok: false, reason: r.reason, message: FAILURE_TEXT[r.reason] });
       }
@@ -297,9 +321,18 @@ export function createApp(config: Config, options: AppOptions = {}): App {
         throttle(limits.call, `call:${ip}`);
         const body = await readJson(req);
         const input = typeof body.number === 'string' ? body.number : '';
-        const parsed = normalizePhone(input, config.defaultCountry);
-        if (!parsed.ok) {
-          throw new HttpError(422, 'invalid_number', FAILURE_TEXT[parsed.reason], { reason: parsed.reason });
+        const raw = body.raw === true;
+        let target: { value: string; display: string };
+        if (raw) {
+          const dial = validateDialString(input);
+          if (!dial.ok) throw new HttpError(422, 'invalid_number', DIAL_FAILURE_TEXT[dial.reason], { reason: dial.reason });
+          target = { value: dial.dial, display: dial.display };
+        } else {
+          const parsed = normalizePhone(input, config.defaultCountry);
+          if (!parsed.ok) {
+            throw new HttpError(422, 'invalid_number', FAILURE_TEXT[parsed.reason], { reason: parsed.reason });
+          }
+          target = { value: parsed.e164, display: parsed.display };
         }
         const devices = store.listDevices();
         let deviceId = typeof body.deviceId === 'string' ? body.deviceId : undefined;
@@ -310,7 +343,7 @@ export function createApp(config: Config, options: AppOptions = {}): App {
         } else if (!store.getDevice(deviceId)) {
           throw new HttpError(404, 'unknown_device', 'That phone is not paired.');
         }
-        return send(res, 201, store.createCall(deviceId, parsed.e164, parsed.display));
+        return send(res, 201, store.createCall(deviceId, target.value, target.display, raw));
       }
 
       if (path === '/api/calls' && method === 'GET') return send(res, 200, { calls: store.recent(10) });

@@ -7,8 +7,9 @@ export type CallState = 'queued' | 'sent_to_phone' | 'dialing' | 'failed';
 
 export interface Call {
   id: string;
-  number: string; // E.164
+  number: string; // E.164, or the text exactly as typed when raw is true
   display: string;
+  raw?: boolean; // "any input" mode: sent as typed, not normalised
   deviceId: string;
   state: CallState;
   reason?: string;
@@ -146,12 +147,13 @@ export class Store extends EventEmitter {
 
   // ---- calls -------------------------------------------------------------------------------
 
-  createCall(deviceId: string, number: string, display: string): Call {
+  createCall(deviceId: string, number: string, display: string, raw = false): Call {
     const t = this.now();
     const call: Call = {
       id: randomUUID(),
       number,
       display,
+      ...(raw ? { raw: true } : {}),
       deviceId,
       state: 'queued',
       createdAt: t,

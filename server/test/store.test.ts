@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { Store, normalizeCode } from '../src/store.ts';
+import { D, E, N } from './numbers.ts';
 
 function fixture() {
   let t = 1_000_000;
@@ -64,7 +65,7 @@ test('normalizeCode strips noise', () => {
 test('call lifecycle: queued, sent_to_phone, dialing', () => {
   const { store } = fixture();
   const { device } = pair(store);
-  const call = store.createCall(device.id, '+919123456789', '+91 91234 56789');
+  const call = store.createCall(device.id, E, D);
   assert.equal(call.state, 'queued');
   const taken = store.takeQueued(device.id);
   assert.equal(taken.length, 1);
@@ -79,7 +80,7 @@ test('report rules: wrong device, unknown call, repeat report', () => {
   const { store } = fixture();
   const a = pair(store).device;
   const b = pair(store).device;
-  const call = store.createCall(a.id, '+919123456789', 'x');
+  const call = store.createCall(a.id, E, 'x');
   store.takeQueued(a.id);
   assert.equal(store.report(b.id, call.id, 'dialing'), 'not_found');
   assert.equal(store.report(a.id, 'nope', 'dialing'), 'not_found');
@@ -91,7 +92,7 @@ test('report rules: wrong device, unknown call, repeat report', () => {
 test('queued call fails when the phone never polls', () => {
   const { store, clock } = fixture();
   const { device } = pair(store);
-  store.createCall(device.id, '+919123456789', 'x');
+  store.createCall(device.id, E, 'x');
   clock.advance(121_000);
   const c = store.recent()[0]!;
   assert.equal(c.state, 'failed');
@@ -102,7 +103,7 @@ test('queued call fails when the phone never polls', () => {
 test('delivered call with no report fails after five minutes', () => {
   const { store, clock } = fixture();
   const { device } = pair(store);
-  store.createCall(device.id, '+919123456789', 'x');
+  store.createCall(device.id, E, 'x');
   store.takeQueued(device.id);
   clock.advance(5 * 60 * 1000 + 1);
   assert.equal(store.recent()[0]!.state, 'failed');
@@ -111,7 +112,7 @@ test('delivered call with no report fails after five minutes', () => {
 test('removing a device fails its open calls', () => {
   const { store } = fixture();
   const { device } = pair(store);
-  store.createCall(device.id, '+919123456789', 'x');
+  store.createCall(device.id, E, 'x');
   assert.ok(store.removeDevice(device.id));
   assert.equal(store.recent()[0]!.state, 'failed');
   assert.equal(store.removeDevice(device.id), false);
@@ -120,7 +121,7 @@ test('removing a device fails its open calls', () => {
 test('recent returns newest first and is capped', () => {
   const { store } = fixture();
   const { device } = pair(store);
-  for (let i = 0; i < 12; i++) store.createCall(device.id, `+9191234567${String(i).padStart(2, '0')}`, String(i));
+  for (let i = 0; i < 12; i++) store.createCall(device.id, `+91${N.slice(0, 8)}${String(i).padStart(2, '0')}`, String(i));
   const r = store.recent(10);
   assert.equal(r.length, 10);
   assert.equal(r[0]!.display, '11');
@@ -133,7 +134,7 @@ test('persistence round trip keeps devices (token hash only) and calls', () => {
     const s1 = new Store(file, 120_000);
     const code = s1.createPairingCode().code;
     const r = s1.redeemCode(code, 'Phone')!;
-    s1.createCall(r.device.id, '+919123456789', 'x');
+    s1.createCall(r.device.id, E, 'x');
     assert.ok(!readFileSync(file, 'utf8').includes(r.token), 'raw token must not be on disk');
     const s2 = new Store(file, 120_000);
     assert.equal(s2.authenticateDevice(r.token)?.id, r.device.id);

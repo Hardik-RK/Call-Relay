@@ -9,5 +9,6 @@ android/local.properties
 android/.idea/
 *.iml
 .kotlin/
+server/public/app.js
 .env.*
 *.env

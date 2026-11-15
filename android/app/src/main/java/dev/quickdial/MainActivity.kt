@@ -105,7 +105,8 @@ class MainActivity : ComponentActivity() {
         val id = intent?.getStringExtra(Notifier.EXTRA_ID) ?: return
         val number = intent.getStringExtra(Notifier.EXTRA_NUMBER) ?: return
         // These extras came from our own PendingIntent, but treat them like any other input.
-        if (!PhoneNumbers.isE164(number)) return
+        val raw = intent.getBooleanExtra(Notifier.EXTRA_RAW, false)
+        if (!(if (raw) PhoneNumbers.isDialString(number) else PhoneNumbers.isE164(number))) return
         when (intent.action) {
             Notifier.ACTION_CONFIRM -> {
                 Notifier.cancelRequest(this, id)
@@ -114,7 +115,7 @@ class MainActivity : ComponentActivity() {
             }
             Notifier.ACTION_REVIEW -> {
                 Notifier.cancelRequest(this, id)
-                AppState.offer(DialCommand(id, number))
+                AppState.offer(DialCommand(id, number, raw))
             }
         }
         // Do not replay this intent after a rotation or when the activity is recreated.
@@ -253,8 +254,13 @@ class MainActivity : ComponentActivity() {
         var listening by remember { mutableStateOf(settings.listening) }
         var country by remember { mutableStateOf(settings.country) }
         var number by remember { mutableStateOf("") }
+        var anyInput by remember { mutableStateOf(false) }
         val scope = rememberCoroutineScope()
-        val parsed = if (number.isBlank()) null else PhoneNumbers.normalize(number, country)
+        val parsed = when {
+            number.isBlank() -> null
+            anyInput -> if (PhoneNumbers.isDialString(number)) PhoneResult.Ok(number.trim()) else PhoneResult.Failed(PhoneFailure.INVALID_CHARACTERS)
+            else -> PhoneNumbers.normalize(number, country)
+        }
 
         // Resume listening when the app is reopened (the service does not survive a reboot).
         LaunchedEffect(Unit) { if (settings.listening) PollService.start(this@MainActivity) }
@@ -288,13 +294,17 @@ class MainActivity : ComponentActivity() {
                         FilterChip(selected = c == country, onClick = { country = c; settings.country = c }, label = { Text(c.code) })
                     }
                 }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Switch(checked = anyInput, onCheckedChange = { anyInput = it })
+                    Text("Dial exactly as typed (short codes, extensions, *#)")
+                }
                 OutlinedTextField(
-                    value = number, onValueChange = { number = it }, label = { Text("Phone number") },
-                    singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    value = number, onValueChange = { number = it }, label = { Text(if (anyInput) "Dial string" else "Phone number") },
+                    singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = if (anyInput) KeyboardType.Text else KeyboardType.Phone),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 when (parsed) {
-                    is PhoneResult.Ok -> Text("Will dial ${parsed.e164}")
+                    is PhoneResult.Ok -> Text(if (anyInput) "Will dial exactly: ${parsed.e164}" else "Will dial ${parsed.e164}")
                     is PhoneResult.Failed -> Text(describe(parsed.reason), color = MaterialTheme.colorScheme.error)
                     null -> Text("Digits, spaces and dashes are fine.")
                 }

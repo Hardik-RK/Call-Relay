@@ -3,7 +3,8 @@ package dev.quickdial
 import org.json.JSONException
 import org.json.JSONObject
 
-data class DialCommand(val id: String, val number: String)
+/** [raw] marks "any input" mode: [number] is dialled exactly as typed instead of being strict E.164. */
+data class DialCommand(val id: String, val number: String, val raw: Boolean = false)
 
 data class RejectedCommand(val id: String?, val reason: String)
 
@@ -14,7 +15,8 @@ data class ParsedCommands(val valid: List<DialCommand>, val rejected: List<Rejec
  *   {"commands":[{"id":"<uuid>","type":"dial","number":"+919123456789","createdAt":1}]}
  *
  * The phone does not trust the server blindly. A command is only accepted when it is a "dial" with
- * a uuid-shaped id and a strict E.164 number. Anything else is rejected with a reason so the
+ * a uuid-shaped id and a strict E.164 number (or, when "raw" is true, a dial string passing
+ * PhoneNumbers.isDialString). Anything else is rejected with a reason so the
  * caller can report a failure instead of silently dropping it. Unknown command types are ignored
  * (forward compatibility), and a malformed body yields an empty result rather than a crash.
  */
@@ -40,11 +42,13 @@ object CommandParser {
                 continue
             }
             val number = item.optString("number", "")
-            if (!PhoneNumbers.isE164(number)) {
+            val raw = item.optBoolean("raw", false)
+            val acceptable = if (raw) PhoneNumbers.isDialString(number) else PhoneNumbers.isE164(number)
+            if (!acceptable) {
                 rejected.add(RejectedCommand(id, "invalid number"))
                 continue
             }
-            if (seen.add(id)) valid.add(DialCommand(id, number))
+            if (seen.add(id)) valid.add(DialCommand(id, number, raw))
         }
         return ParsedCommands(valid, rejected)
     }

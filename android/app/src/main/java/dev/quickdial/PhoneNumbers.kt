@@ -31,6 +31,19 @@ object PhoneNumbers {
     /** True for a string that is already strict E.164. Used to vet commands from the server. */
     fun isE164(value: String): Boolean = E164.matches(value)
 
+    const val MAX_DIAL_STRING = 32
+
+    /**
+     * "Any input" mode: text dialled exactly as typed (short codes, extensions, *# codes). Only
+     * empty text, too much text and control or invisible characters are refused. Mirrors the server's
+     * validateDialString.
+     */
+    fun isDialString(value: String): Boolean {
+        val text = value.trim()
+        if (text.isEmpty() || text.codePointCount(0, text.length) > MAX_DIAL_STRING) return false
+        return text.none { it != ' ' && (Character.isISOControl(it) || Character.isWhitespace(it) || Character.isSpaceChar(it) || it.category == CharCategory.FORMAT) }
+    }
+
     /** Mask all but the last four digits, for places where a number should not be fully on show. */
     fun mask(e164: String): String =
         if (e164.length <= 4) e164 else "*".repeat(e164.length - 4) + e164.takeLast(4)

@@ -20,6 +20,7 @@ object Notifier {
     const val ACTION_DECLINE = "dev.quickdial.DECLINE"
     const val EXTRA_ID = "call_id"
     const val EXTRA_NUMBER = "number"
+    const val EXTRA_RAW = "raw"
 
     fun ensureChannels(context: Context) {
         val nm = context.getSystemService(NotificationManager::class.java)
@@ -74,6 +75,7 @@ object Notifier {
             this.action = action
             putExtra(EXTRA_ID, command.id)
             putExtra(EXTRA_NUMBER, command.number)
+            putExtra(EXTRA_RAW, command.raw)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         }
 

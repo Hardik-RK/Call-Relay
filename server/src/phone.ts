@@ -84,6 +84,27 @@ function formatDisplay(digits: string, rule: CountryRule | null): string {
   return `+${rule.dial} ${national}`;
 }
 
+export type DialStringFailure = 'empty' | 'too_long' | 'invalid_characters';
+
+export type DialStringResult =
+  | { ok: true; dial: string; display: string }
+  | { ok: false; reason: DialStringFailure };
+
+export const MAX_DIAL_STRING = 32;
+
+/**
+ * "Any input" mode: the text is sent to the phone exactly as typed (short codes, extensions,
+ * *#-style codes, pauses). Only what could not possibly be dialled is refused: nothing, too much
+ * text, and control or invisible characters. The phone still asks you to confirm before dialling.
+ */
+export function validateDialString(input: string): DialStringResult {
+  const text = input.trim();
+  if (text === '') return { ok: false, reason: 'empty' };
+  if ([...text].length > MAX_DIAL_STRING) return { ok: false, reason: 'too_long' };
+  if (/[\p{C}\p{Z}]/u.test(text.replace(/ /g, ''))) return { ok: false, reason: 'invalid_characters' };
+  return { ok: true, dial: text, display: text };
+}
+
 export function normalizePhone(input: string, defaultCountry: CountryCode): PhoneResult {
   const text = input.trim();
   if (text === '') return fail('empty');

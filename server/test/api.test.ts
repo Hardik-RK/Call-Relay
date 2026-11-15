@@ -4,6 +4,7 @@ import type { AddressInfo } from 'node:net';
 import { after, before, describe, test } from 'node:test';
 import { createApp, type App } from '../src/app.ts';
 import { loadConfig } from '../src/config.ts';
+import { D, E, EM, M, N, group } from './numbers.ts';
 
 interface Harness {
   app: App;
@@ -64,7 +65,7 @@ describe('pairing and calling, end to end', () => {
   });
 
   test('calling before any phone is paired is a clear 409', async () => {
-    const res = await post(h, '/api/calls', { number: '9123456789' });
+    const res = await post(h, '/api/calls', { number: N });
     assert.equal(res.status, 409);
     assert.equal(((await res.json()) as { error: string }).error, 'no_phone_paired');
   });
@@ -72,18 +73,18 @@ describe('pairing and calling, end to end', () => {
   test('pair, queue a call, phone receives it and reports dialing', async () => {
     const phone = await pairPhone(h);
 
-    const created = await post(h, '/api/calls', { number: '091234-56789' });
+    const created = await post(h, '/api/calls', { number: `0${N.slice(0, 5)}-${N.slice(5)}` });
     assert.equal(created.status, 201);
     const call = (await created.json()) as { id: string; number: string; display: string; state: string };
-    assert.equal(call.number, '+919123456789');
-    assert.equal(call.display, '+91 91234 56789');
+    assert.equal(call.number, E);
+    assert.equal(call.display, D);
     assert.equal(call.state, 'queued');
 
     const polled = await fetch(h.base + '/api/device/commands', { headers: phone.auth });
     const cmds = ((await polled.json()) as { commands: { id: string; type: string; number: string }[] }).commands;
     assert.deepEqual(
       cmds.map((c) => [c.id, c.type, c.number]),
-      [[call.id, 'dial', '+919123456789']],
+      [[call.id, 'dial', E]],
     );
 
     let state = (await (await fetch(h.base + '/api/state')).json()) as { calls: { state: string }[] };
@@ -104,17 +105,17 @@ describe('pairing and calling, end to end', () => {
     const pending = fetch(h.base + '/api/device/commands?wait=20', { headers: phone.auth });
     await new Promise((r) => setTimeout(r, 150));
     // two phones are paired now, so the target must be named
-    const res = await post(h, '/api/calls', { number: '+91 98765 43210', deviceId: phone.deviceId });
+    const res = await post(h, '/api/calls', { number: `+91 ${group(M)}`, deviceId: phone.deviceId });
     assert.equal(res.status, 201);
     const body = (await (await pending).json()) as { commands: { number: string }[] };
-    assert.equal(body.commands[0]!.number, '+919876543210');
+    assert.equal(body.commands[0]!.number, EM);
     assert.ok(Date.now() - started < 5000, 'returned well before the 20 s wait');
   });
 
   test('two phones without deviceId is a 400, unknown device is a 404', async () => {
-    assert.equal((await post(h, '/api/calls', { number: '9123456789' })).status, 400);
+    assert.equal((await post(h, '/api/calls', { number: N })).status, 400);
     const unknown = await post(h, '/api/calls', {
-      number: '9123456789',
+      number: N,
       deviceId: '00000000-0000-0000-0000-000000000000',
     });
     assert.equal(unknown.status, 404);
@@ -131,11 +132,11 @@ describe('pairing and calling, end to end', () => {
   });
 
   test('normalize endpoint previews', async () => {
-    const ok = (await (await fetch(h.base + '/api/normalize?number=09123456789')).json()) as {
+    const ok = (await (await fetch(h.base + `/api/normalize?number=0${N}`)).json()) as {
       ok: boolean;
       e164: string;
     };
-    assert.deepEqual([ok.ok, ok.e164], [true, '+919123456789']);
+    assert.deepEqual([ok.ok, ok.e164], [true, E]);
     const bad = (await (await fetch(h.base + '/api/normalize?number=abc')).json()) as {
       ok: boolean;
       reason: string;
@@ -146,7 +147,7 @@ describe('pairing and calling, end to end', () => {
   test('phone can report failure and unpair itself', async () => {
     const phone = await pairPhone(h, 'Third phone');
     const call = (await (
-      await post(h, '/api/calls', { number: '9123456789', deviceId: phone.deviceId })
+      await post(h, '/api/calls', { number: N, deviceId: phone.deviceId })
     ).json()) as { id: string };
     await fetch(h.base + '/api/device/commands', { headers: phone.auth });
     await post(h, `/api/device/calls/${call.id}/status`, { state: 'failed', reason: 'declined on phone' }, phone.auth);
@@ -186,7 +187,7 @@ describe('device authentication', () => {
     const a = await pairPhone(h, 'A');
     const b = await pairPhone(h, 'B');
     const call = (await (
-      await post(h, '/api/calls', { number: '9123456789', deviceId: a.deviceId })
+      await post(h, '/api/calls', { number: N, deviceId: a.deviceId })
     ).json()) as { id: string };
     await fetch(h.base + '/api/device/commands', { headers: a.auth });
     const res = await post(h, `/api/device/calls/${call.id}/status`, { state: 'dialing' }, b.auth);
@@ -247,7 +248,7 @@ describe('rate limits on calls', () => {
     const statuses: number[] = [];
     let retry: string | null = null;
     for (let i = 0; i < 12; i++) {
-      const r = await post(h, '/api/calls', { number: '9123456789' });
+      const r = await post(h, '/api/calls', { number: N });
       statuses.push(r.status);
       if (r.status === 429) retry = r.headers.get('retry-after');
     }
@@ -263,7 +264,7 @@ describe('browser-facing guards', () => {
   after(() => h.close());
 
   test('cross-origin requests are refused even though no CORS headers are sent', async () => {
-    const res = await post(h, '/api/calls', { number: '9123456789' }, { origin: 'https://evil.example' });
+    const res = await post(h, '/api/calls', { number: N }, { origin: 'https://evil.example' });
     assert.equal(res.status, 403);
     const get = await fetch(h.base + '/api/state', { headers: { origin: 'https://evil.example' } });
     assert.equal(get.status, 403);
@@ -349,5 +350,62 @@ describe('allowed hosts', () => {
     } finally {
       await h.close();
     }
+  });
+});
+
+describe('any-input (raw) dialling', () => {
+  let h: Harness;
+  before(async () => (h = await start()));
+  after(() => h.close());
+
+  test('a short code is queued exactly as typed and reaches the phone flagged raw', async () => {
+    const phone = await pairPhone(h);
+    const res = await post(h, '/api/calls', { number: ' *#06# ', raw: true });
+    assert.equal(res.status, 201);
+    const call = (await res.json()) as { id: string; number: string; display: string; raw?: boolean };
+    assert.deepEqual([call.number, call.display, call.raw], ['*#06#', '*#06#', true]);
+    const polled = (await (await fetch(h.base + '/api/device/commands', { headers: phone.auth })).json()) as {
+      commands: { number: string; raw?: boolean }[];
+    };
+    assert.deepEqual(polled.commands.map((c) => [c.number, c.raw]), [['*#06#', true]]);
+  });
+
+  test('a normal call carries no raw flag', async () => {
+    const phone = await pairPhone(h, 'Another phone');
+    await post(h, '/api/calls', { number: N, deviceId: phone.deviceId });
+    const polled = (await (await fetch(h.base + '/api/device/commands', { headers: phone.auth })).json()) as {
+      commands: Record<string, unknown>[];
+    };
+    assert.equal(polled.commands.length, 1);
+    assert.equal('raw' in polled.commands[0]!, false);
+  });
+
+  test('raw mode still refuses nothing, too much, and control characters', async () => {
+    for (const [number, reason] of [
+      ['   ', 'empty'],
+      ['1'.repeat(33), 'too_long'],
+      ['12\u0000 34', 'invalid_characters'],
+      ['12\n34', 'invalid_characters'],
+    ] as const) {
+      const res = await post(h, '/api/calls', { number, raw: true, deviceId: '00000000-0000-0000-0000-000000000000' });
+      assert.equal(res.status, 422, JSON.stringify(number));
+      assert.equal(((await res.json()) as { reason: string }).reason, reason);
+    }
+  });
+
+  test('the preview endpoint honours raw=1', async () => {
+    const ok = (await (await fetch(h.base + '/api/normalize?raw=1&number=' + encodeURIComponent('1800 123,,4'))).json()) as {
+      ok: boolean;
+      display: string;
+    };
+    assert.deepEqual([ok.ok, ok.display], [true, '1800 123,,4']);
+  });
+
+  test('the compiled page script is served and the CSP no longer allows inline script', async () => {
+    const js = await fetch(h.base + '/app.js');
+    assert.equal(js.status, 200);
+    assert.match(js.headers.get('content-type') ?? '', /javascript/);
+    const page = await fetch(h.base + '/');
+    assert.doesNotMatch(page.headers.get('content-security-policy') ?? '', /script-src[^;]*unsafe-inline/);
   });
 });

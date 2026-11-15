@@ -1,146 +1,146 @@
 [
  {
-  "input": "9123456789",
+  "input": "9128174284",
   "country": "IN",
-  "e164": "+919123456789",
+  "e164": "+919128174284",
   "note": "bare 10 digits"
  },
  {
-  "input": "91234 56789",
+  "input": "91281 74284",
   "country": "IN",
-  "e164": "+919123456789",
+  "e164": "+919128174284",
   "note": "space grouping 5-5"
  },
  {
-  "input": "91234-56789",
+  "input": "91281-74284",
   "country": "IN",
-  "e164": "+919123456789",
+  "e164": "+919128174284",
   "note": "dash"
  },
  {
-  "input": "  9123456789  ",
+  "input": "  9128174284  ",
   "country": "IN",
-  "e164": "+919123456789",
+  "e164": "+919128174284",
   "note": "surrounding whitespace"
  },
  {
-  "input": "09123456789",
+  "input": "09128174284",
   "country": "IN",
-  "e164": "+919123456789",
+  "e164": "+919128174284",
   "note": "leading trunk 0"
  },
  {
-  "input": "0 91234 56789",
+  "input": "0 91281 74284",
   "country": "IN",
-  "e164": "+919123456789",
+  "e164": "+919128174284",
   "note": "trunk 0 plus spaces"
  },
  {
-  "input": "+91 91234 56789",
+  "input": "+91 91281 74284",
   "country": "IN",
-  "e164": "+919123456789",
+  "e164": "+919128174284",
   "note": "plus 91 spaces"
  },
  {
-  "input": "+919123456789",
+  "input": "+919128174284",
   "country": "IN",
-  "e164": "+919123456789",
+  "e164": "+919128174284",
   "note": "already e164"
  },
  {
-  "input": "919123456789",
+  "input": "919128174284",
   "country": "IN",
-  "e164": "+919123456789",
+  "e164": "+919128174284",
   "note": "91 prefix, no plus"
  },
  {
-  "input": "91 91234 56789",
+  "input": "91 91281 74284",
   "country": "IN",
-  "e164": "+919123456789",
+  "e164": "+919128174284",
   "note": "91 prefix with spaces"
  },
  {
-  "input": "0919123456789",
+  "input": "0919128174284",
   "country": "IN",
-  "e164": "+919123456789",
+  "e164": "+919128174284",
   "note": "0 then 91"
  },
  {
-  "input": "00919123456789",
+  "input": "00919128174284",
   "country": "IN",
-  "e164": "+919123456789",
+  "e164": "+919128174284",
   "note": "00 international prefix"
  },
  {
-  "input": "+91-91234-56789",
+  "input": "+91-91281-74284",
   "country": "IN",
-  "e164": "+919123456789",
+  "e164": "+919128174284",
   "note": "plus 91 with dashes"
  },
  {
-  "input": "+91 (0) 91234 56789",
+  "input": "+91 (0) 91281 74284",
   "country": "IN",
-  "e164": "+919123456789",
+  "e164": "+919128174284",
   "note": "bracketed trunk zero"
  },
  {
-  "input": "(091) 234-56789",
+  "input": "(091) 281-74284",
   "country": "IN",
-  "e164": "+919123456789",
+  "e164": "+919128174284",
   "note": "mixed brackets and dash"
  },
  {
-  "input": "91.23.45.67.89",
+  "input": "91.28.17.42.84",
   "country": "IN",
-  "e164": "+919123456789",
+  "e164": "+919128174284",
   "note": "dots"
  },
  {
-  "input": "9876543210",
+  "input": "6197950891",
   "country": "IN",
-  "e164": "+919876543210",
-  "note": "starts with 98"
- },
- {
-  "input": "6000000001",
-  "country": "IN",
-  "e164": "+916000000001",
+  "e164": "+916197950891",
   "note": "starts with 6"
  },
  {
-  "input": "7000000001",
+  "input": "7483159679",
   "country": "IN",
-  "e164": "+917000000001",
+  "e164": "+917483159679",
   "note": "starts with 7"
  },
  {
-  "input": "8000000001",
+  "input": "8147036010",
   "country": "IN",
-  "e164": "+918000000001",
+  "e164": "+918147036010",
   "note": "starts with 8"
  },
  {
-  "input": "9100000001",
+  "input": "9148707105",
   "country": "IN",
-  "e164": "+919100000001",
+  "e164": "+919148707105",
+  "note": "starts with 9"
+ },
+ {
+  "input": "9131999327",
+  "country": "IN",
+  "e164": "+919131999327",
   "note": "10 digits starting with 91 is national, not a country code"
  },
  {
-  "input": "011 2345 6789",
+  "input": "011 0773 6410",
   "country": "IN",
-  "e164": "+911123456789",
+  "e164": "+911107736410",
   "note": "landline with STD code 11"
  },
  {
-  "input": "080-2345-6789",
+  "input": "080-0773-6410",
   "country": "IN",
-  "e164": "+918023456789",
+  "e164": "+918007736410",
   "note": "landline with STD code 80"
  },
  {
-  "input": "+91 11 2345 6789",
+  "input": "+91 11 0773 6410",
   "country": "IN",
-  "e164": "+911123456789",
+  "e164": "+911107736410",
   "note": "landline international"
  },
  {
@@ -156,43 +156,43 @@
   "note": ""
  },
  {
-  "input": "912345678",
+  "input": "912817428",
   "country": "IN",
   "error": "too_short",
   "note": "9 digits"
  },
  {
-  "input": "91234567890",
+  "input": "91281742841",
   "country": "IN",
   "error": "too_long",
   "note": "11 digits"
  },
  {
-  "input": "0912345678",
+  "input": "0912817428",
   "country": "IN",
   "error": "too_short",
   "note": "trunk plus 9 digits"
  },
  {
-  "input": "00091234567890",
+  "input": "0009128174284",
   "country": "IN",
   "error": "invalid_for_country",
   "note": "000 prefix leaves a leading zero"
  },
  {
-  "input": "+91 912345678",
+  "input": "+91 912817428",
   "country": "IN",
   "error": "too_short",
   "note": "plus 91 with 9 digits"
  },
  {
-  "input": "+91 91234567890",
+  "input": "+91 91281742841",
   "country": "IN",
   "error": "too_long",
   "note": "plus 91 with 11 digits"
  },
  {
-  "input": "+91 0123456789",
+  "input": "+91 0322264544",
   "country": "IN",
   "error": "invalid_for_country",
   "note": "national part starts with 0"
@@ -204,37 +204,37 @@
   "note": "all zero"
  },
  {
-  "input": "91234abc89",
+  "input": "91281abc84",
   "country": "IN",
   "error": "invalid_characters",
   "note": "letters"
  },
  {
-  "input": "9123456789x",
+  "input": "9128174284x",
   "country": "IN",
   "error": "invalid_characters",
   "note": "trailing letter"
  },
  {
-  "input": "+91 91234 56789 ext 4",
+  "input": "+91 91281 74284 ext 4",
   "country": "IN",
   "error": "invalid_characters",
   "note": "extension text"
  },
  {
-  "input": "91234 56789 #",
+  "input": "91281 74284 #",
   "country": "IN",
   "error": "invalid_characters",
   "note": "hash sign"
  },
  {
-  "input": "++919123456789",
+  "input": "++919128174284",
   "country": "IN",
   "error": "invalid_characters",
   "note": "double plus"
  },
  {
-  "input": "91+23456789",
+  "input": "91+28174284",
   "country": "IN",
   "error": "invalid_characters",
   "note": "plus in the middle"
@@ -258,7 +258,7 @@
   "note": "no digits"
  },
  {
-  "input": "३१२३४५६७८९",
+  "input": "९१२८१७४२८४",
   "country": "IN",
   "error": "invalid_characters",
   "note": "Devanagari digits are not accepted"
@@ -268,6 +268,18 @@
   "country": "IN",
   "error": "invalid_characters",
   "note": "absurdly long"
+ },
+ {
+  "input": "91281742",
+  "country": "IN",
+  "error": "too_short",
+  "note": "8 digits"
+ },
+ {
+  "input": "+91 9128174284127",
+  "country": "IN",
+  "error": "too_long",
+  "note": "plus 91 with 13 digits"
  },
  {
   "input": "+1 202 555 0143",

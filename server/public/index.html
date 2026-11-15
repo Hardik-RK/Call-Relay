@@ -68,6 +68,8 @@
   .dot.on { background: var(--dialing); }
   .code { font: 700 2rem/1.2 ui-monospace, "Cascadia Mono", Menlo, monospace; letter-spacing: 0.12em; text-align: center; padding: 14px; background: var(--accent-soft); border-radius: 10px; margin: 12px 0 6px; user-select: all; }
   .empty { color: var(--muted); font-size: 0.92rem; margin: 0; }
+  .check { display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 0.88rem; margin: 10px 0 0; }
+  .check input { width: 18px; height: 18px; }
   .hidden { display: none; }
 </style>
 </head>
@@ -94,6 +96,8 @@
         <input id="number" type="text" inputmode="tel" autocomplete="off" placeholder="e.g. 91234 56789" aria-describedby="hint">
         <button class="primary" id="callBtn" type="submit">Call</button>
       </div>
+      <label class="check"><input type="checkbox" id="rawMode"> Dial exactly as typed (short codes, extensions, *#)</label>
+      <p class="hint hidden" id="rawNote">Nothing is checked or reformatted. Your phone still asks you to confirm.</p>
       <div id="deviceRow" class="hidden" style="margin-top:10px">
         <label for="device">From phone</label>
         <select id="device"></select>
@@ -123,198 +127,6 @@
   </section>
 </main>
 
-<script>
-(() => {
-  const $ = (id) => document.getElementById(id);
-  const STATE_LABEL = { queued: 'Queued', sent_to_phone: 'Sent to phone', dialing: 'Dialing', failed: 'Failed' };
-  let accessKey = '';
-  try { accessKey = sessionStorage.getItem('qd-key') || ''; } catch { /* storage unavailable */ }
-  let pairExpires = 0;
-  let timer = null;
-  let previewTimer = null;
-  let previewSeq = 0;
-  let lastDeviceCount = -1;
-
-  async function api(path, opts = {}) {
-    const headers = { ...(opts.headers || {}) };
-    if (opts.body !== undefined) headers['content-type'] = 'application/json';
-    if (accessKey) headers['x-access-key'] = accessKey;
-    const res = await fetch(path, { ...opts, headers, body: opts.body === undefined ? undefined : JSON.stringify(opts.body) });
-    let data = null;
-    try { data = await res.json(); } catch { /* empty body */ }
-    return { status: res.status, data };
-  }
-
-  function setHint(text, kind) {
-    const h = $('hint');
-    h.textContent = text;
-    h.className = 'hint' + (kind ? ' ' + kind : '');
-  }
-
-  function timeAgo(ms) {
-    const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
-    if (s < 5) return 'just now';
-    if (s < 60) return s + 's ago';
-    if (s < 3600) return Math.floor(s / 60) + ' min ago';
-    return new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-
-  function li(children) {
-    const el = document.createElement('li');
-    el.className = 'item';
-    children.forEach((c) => el.appendChild(c));
-    return el;
-  }
-  function span(text, cls) {
-    const el = document.createElement('span');
-    el.textContent = text;
-    if (cls) el.className = cls;
-    return el;
-  }
-
-  function render(state) {
-    $('keyCard').classList.add('hidden');
-    if (lastDeviceCount >= 0 && state.devices.length > lastDeviceCount) {
-      clearInterval(timer);
-      $('pairBox').classList.add('hidden');
-    }
-    lastDeviceCount = state.devices.length;
-
-    const devices = $('devices');
-    devices.replaceChildren();
-    for (const d of state.devices) {
-      const left = document.createElement('div');
-      const top = document.createElement('div');
-      top.append(span('', 'dot' + (d.online ? ' on' : '')), span(d.name, 'num'));
-      const meta = document.createElement('div');
-      meta.className = 'meta';
-      meta.textContent = d.online ? 'Online' : 'Last seen ' + timeAgo(d.lastSeenAt);
-      left.append(top, meta);
-      const btn = document.createElement('button');
-      btn.type = 'button'; btn.className = 'small'; btn.textContent = 'Unpair';
-      btn.addEventListener('click', async () => {
-        if (!confirm('Unpair ' + d.name + '?')) return;
-        await api('/api/devices/' + encodeURIComponent(d.id), { method: 'DELETE' });
-        refresh();
-      });
-      devices.appendChild(li([left, btn]));
-    }
-    $('noDevices').classList.toggle('hidden', state.devices.length > 0);
-
-    const sel = $('device');
-    const prev = sel.value;
-    sel.replaceChildren();
-    for (const d of state.devices) {
-      const o = document.createElement('option');
-      o.value = d.id; o.textContent = d.name + (d.online ? '' : ' (offline)');
-      sel.appendChild(o);
-    }
-    if ([...sel.options].some((o) => o.value === prev)) sel.value = prev;
-    $('deviceRow').classList.toggle('hidden', state.devices.length < 2);
-
-    const calls = $('calls');
-    calls.replaceChildren();
-    for (const c of state.calls) {
-      const left = document.createElement('div');
-      const meta = document.createElement('div');
-      meta.className = 'meta';
-      meta.textContent = timeAgo(c.createdAt) + (c.reason ? ' · ' + c.reason : '');
-      left.append(span(c.display, 'num'), meta);
-      calls.appendChild(li([left, span(STATE_LABEL[c.state] || c.state, 'badge ' + c.state)]));
-    }
-    $('noCalls').classList.toggle('hidden', state.calls.length > 0);
-  }
-
-  async function refresh() {
-    try {
-      const { status, data } = await api('/api/state');
-      if (status === 401) { $('keyCard').classList.remove('hidden'); return; }
-      if (status === 200) render(data);
-    } catch { /* server briefly unreachable: keep the last view */ }
-  }
-
-  $('keyBtn').addEventListener('click', async () => {
-    accessKey = $('key').value;
-    const { status } = await api('/api/state');
-    if (status === 200) {
-      try { sessionStorage.setItem('qd-key', accessKey); } catch { /* ignore */ }
-      $('keyErr').textContent = '';
-      refresh();
-    } else {
-      $('keyErr').textContent = status === 429 ? 'Too many attempts. Wait a minute.' : 'That key was not accepted.';
-    }
-  });
-
-  $('number').addEventListener('input', () => {
-    clearTimeout(previewTimer);
-    const value = $('number').value;
-    if (!value.trim()) { setHint(''); return; }
-    const seq = ++previewSeq;
-    previewTimer = setTimeout(async () => {
-      const { data } = await api('/api/normalize?number=' + encodeURIComponent(value));
-      if (seq !== previewSeq || !data) return;
-      if (data.ok) setHint('Will dial ' + data.display, 'ok');
-      else setHint(data.message || 'Not a valid number.', 'err');
-    }, 200);
-  });
-
-  $('dialForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const btn = $('callBtn');
-    btn.disabled = true;
-    try {
-      const body = { number: $('number').value };
-      if (!$('deviceRow').classList.contains('hidden')) body.deviceId = $('device').value;
-      const { status, data } = await api('/api/calls', { method: 'POST', body });
-      if (status === 201) {
-        previewSeq++;
-        setHint('Queued ' + data.display + '. Waiting for your phone.', 'ok');
-        $('number').value = '';
-      } else if (status === 429) {
-        setHint('Slow down: try again in ' + (data.retryAfter || 'a few') + ' seconds.', 'err');
-      } else {
-        setHint((data && data.message) || 'Could not place the call.', 'err');
-      }
-    } catch {
-      setHint('Server unreachable.', 'err');
-    } finally {
-      btn.disabled = false;
-      refresh();
-    }
-  });
-
-  $('pairBtn').addEventListener('click', async () => {
-    const { status, data } = await api('/api/pairing-code', { method: 'POST', body: {} });
-    if (status !== 201) {
-      $('code').textContent = '';
-      $('codeMeta').textContent = status === 429 ? 'Too many codes requested. Wait a minute.' : 'Could not create a code.';
-      $('pairBox').classList.remove('hidden');
-      return;
-    }
-    $('code').textContent = data.code;
-    pairExpires = data.expiresAt;
-    $('pairBox').classList.remove('hidden');
-    tickCode();
-  });
-
-  function tickCode() {
-    clearInterval(timer);
-    const update = () => {
-      const left = Math.round((pairExpires - Date.now()) / 1000);
-      if (left <= 0) {
-        $('pairBox').classList.add('hidden');
-        clearInterval(timer);
-        return;
-      }
-      $('codeMeta').textContent = 'Expires in ' + Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0');
-    };
-    update();
-    timer = setInterval(update, 1000);
-  }
-
-  refresh();
-  setInterval(refresh, 2000);
-})();
-</script>
+<script type="module" src="/app.js"></script>
 </body>
 </html>
