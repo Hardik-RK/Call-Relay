@@ -48,6 +48,12 @@ export function normalizeCode(input: string): string {
   return input.toUpperCase().replace(/[^A-Z0-9]/g, '');
 }
 
+/** A device name is shown on the page: drop control and bidi/format characters, keep whole code points. */
+export function cleanDeviceName(input: string): string {
+  const text = input.replace(/[\p{C}\p{Zl}\p{Zp}]/gu, '').replace(/\s+/g, ' ').trim();
+  return [...text].slice(0, 40).join('').trim() || 'Phone';
+}
+
 interface Persisted {
   devices: Device[];
   calls: Call[];
@@ -97,7 +103,7 @@ export class Store extends EventEmitter {
     const t = this.now();
     const device: Device = {
       id: randomUUID(),
-      name: deviceName.trim().slice(0, 40) || 'Phone',
+      name: cleanDeviceName(deviceName),
       tokenHash: sha256(token).toString('hex'),
       createdAt: t,
       lastSeenAt: t,
@@ -108,7 +114,12 @@ export class Store extends EventEmitter {
   }
 
   hasActivePairingCode(): boolean {
-    return this.pairing !== null && this.now() <= this.pairing.expiresAt;
+    return this.pairingExpiresAt() !== null;
+  }
+
+  /** Expiry of the one live pairing code, or null when none is live. Lets a page notice its code was replaced or burned. */
+  pairingExpiresAt(): number | null {
+    return this.pairing !== null && this.now() <= this.pairing.expiresAt ? this.pairing.expiresAt : null;
   }
 
   // ---- devices -----------------------------------------------------------------------------

@@ -341,6 +341,34 @@ describe('access key mode', () => {
   });
 });
 
+describe('the page can unlock itself in access key mode', () => {
+  const KEY = 'correct-horse-battery';
+  let h: Harness;
+  before(async () => (h = await start({ ACCESS_KEY: KEY })));
+  after(() => h.close());
+
+  test('the page and its script load without the key, the API does not', async () => {
+    assert.equal((await fetch(h.base + '/')).status, 200);
+    const js = await fetch(h.base + '/app.js');
+    assert.equal(js.status, 200);
+    // The page script must be able to send the key, otherwise ACCESS_KEY locks the owner out of the page.
+    assert.match(await js.text(), /x-access-key/);
+    assert.equal((await fetch(h.base + '/api/state')).status, 401);
+  });
+
+  test('state reports the live pairing code expiry so a page can notice its code was replaced', async () => {
+    const keyed = { 'x-access-key': KEY };
+    const state = async () => (await (await fetch(h.base + '/api/state', { headers: keyed })).json()) as { pairingActive: boolean; pairingExpiresAt: number | null };
+    assert.deepEqual(await state(), { ...(await state()), pairingActive: false, pairingExpiresAt: null });
+    const first = (await (await post(h, '/api/pairing-code', {}, keyed)).json()) as { expiresAt: number };
+    assert.equal((await state()).pairingExpiresAt, first.expiresAt);
+    for (let i = 0; i < 5; i++) await post(h, '/api/pair', { code: 'AAAA-BBBB' });
+    const after = await state();
+    assert.equal(after.pairingActive, false);
+    assert.equal(after.pairingExpiresAt, null);
+  });
+});
+
 describe('allowed hosts', () => {
   test('a configured private name is accepted, others are not', async () => {
     const h = await start({ ALLOWED_HOSTS: 'dial.tailnet.example' });

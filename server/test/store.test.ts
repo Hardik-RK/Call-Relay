@@ -153,3 +153,37 @@ test('missing state file starts empty instead of crashing', () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('device names are cleaned for display: no control or bidi characters, whole code points, 40 max', () => {
+  const { store } = fixture();
+  const name = (raw: string) => {
+    const r = store.redeemCode(store.createPairingCode().code, raw);
+    assert.ok(r);
+    return r.device.name;
+  };
+  assert.equal(name('‮evil‬ phone'), 'evil phone');
+  assert.equal(name('a\tb\nc\u0000d'), 'abcd');
+  assert.equal(name('   '), 'Phone');
+  assert.equal(name('​'), 'Phone');
+  assert.equal(name('W'.repeat(100)).length, 40);
+  const emoji = name('x' + '\u{1F600}'.repeat(60));
+  assert.equal([...emoji].length, 40);
+  assert.ok(!/[\ud800-\udbff](?![\udc00-\udfff])/.test(emoji), 'no split surrogate pair');
+});
+
+test('pairingExpiresAt follows the one live code: replaced, burned, redeemed and expired codes clear it', () => {
+  const { store, clock } = fixture();
+  assert.equal(store.pairingExpiresAt(), null);
+  const first = store.createPairingCode();
+  assert.equal(store.pairingExpiresAt(), first.expiresAt);
+  const second = store.createPairingCode();
+  assert.equal(store.pairingExpiresAt(), second.expiresAt);
+  for (let i = 0; i < 5; i++) store.redeemCode('AAAA-AAAA', 'x');
+  assert.equal(store.pairingExpiresAt(), null);
+  const third = store.createPairingCode();
+  assert.ok(store.redeemCode(third.code, 'Phone'));
+  assert.equal(store.pairingExpiresAt(), null);
+  store.createPairingCode();
+  clock.advance(10 * 60 * 1000 + 1);
+  assert.equal(store.pairingExpiresAt(), null);
+});

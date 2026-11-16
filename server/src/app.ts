@@ -323,6 +323,7 @@ export function createApp(config: Config, options: AppOptions = {}): App {
           devices: store.listDevices().map(deviceView),
           calls: store.recent(10),
           pairingActive: store.hasActivePairingCode(),
+          pairingExpiresAt: store.pairingExpiresAt(),
         });
       }
 

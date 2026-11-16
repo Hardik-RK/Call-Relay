@@ -113,7 +113,7 @@ By default the server listens on `127.0.0.1` only, so only your computer can rea
 
 **What the server does for you**
 
-- Refuses to start on a non-loopback `HOST` unless `ACCESS_KEY` (12+ characters) is set.
+- `ACCESS_KEY` (12+ characters) is optional, including beyond loopback, because the phone still asks before every call. When it is set the web page shows an access key field once and remembers the key in that browser. The server prints a reminder when it listens on the network without one.
 - Pairing uses a one-time 8-character code (about 40 bits), valid 10 minutes, burned after 5 wrong guesses or one success. Only a SHA-256 hash of each device token is stored.
 - Rate limits: 5 pairing attempts per minute per address, 10 calls per minute, 5 codes per minute, lockout after 10 failed access-key or token attempts.
 - Browser requests must be same-origin and `application/json`, which blocks drive-by posts from other websites to `localhost`. The `Host` header must be `localhost`, `127.0.0.1`, `[::1]` or listed in `ALLOWED_HOSTS`, which blocks DNS rebinding.
@@ -146,7 +146,7 @@ Short version: the phone receives commands reliably only while the foreground se
 
 | Suite | Command | Count |
 | --- | --- | --- |
-| Server (node:test): phone table, limiter, config, store, HTTP API | `cd server && npm test` | 132 |
+| Server (node:test): phone table, limiter, config, store, HTTP API | `cd server && npm test` | 138 |
 | Android (JUnit): shared phone table, command parser, server URL, status mapping | `cd android && ./gradlew testDebugUnitTest` | 26 |
 
 CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) typechecks and tests the server, then runs Android unit tests, lint and `assembleDebug`, and uploads the debug APK.

@@ -23,6 +23,8 @@ interface CallView {
 interface StateResponse {
   devices: DeviceView[];
   calls: CallView[];
+  /** Expiry of the one live pairing code (any page's), or null. Lets this page notice its own code was replaced or burned. */
+  pairingExpiresAt?: number | null;
 }
 
 interface ApiError {
@@ -63,13 +65,38 @@ const STATE_LABEL: Record<CallState, string> = {
 
 // ---- api ------------------------------------------------------------------------------------
 
+// When the server runs with ACCESS_KEY the page asks for it once and sends it with every request.
+const KEY_STORE = 'qd-key';
+
+function savedKey(): string {
+  try {
+    return localStorage.getItem(KEY_STORE) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function saveKey(key: string): void {
+  try {
+    if (key) localStorage.setItem(KEY_STORE, key);
+    else localStorage.removeItem(KEY_STORE);
+  } catch {
+    /* storage unavailable: the key lasts until the page is closed */
+  }
+}
+
+let accessKey = savedKey();
+
 async function api<T = unknown>(
   path: string,
   opts: { method?: string; body?: unknown } = {},
 ): Promise<{ status: number; data: T | null }> {
+  const headers: Record<string, string> = {};
+  if (opts.body !== undefined) headers['content-type'] = 'application/json';
+  if (accessKey) headers['x-access-key'] = accessKey;
   const res = await fetch(path, {
     method: opts.method ?? 'GET',
-    headers: opts.body === undefined ? {} : { 'content-type': 'application/json' },
+    headers,
     body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
   });
   let data: T | null = null;
@@ -303,12 +330,89 @@ function renderCalls(calls: CallView[]): void {
   }
 }
 
-function showUnauthorised(): void {
+/** True while the server is refusing us: the page stops polling (so it cannot lock its own address out) until a key is entered. */
+let locked = false;
+
+function showApp(): void {
+  if (!locked) return;
+  locked = false;
+  $('main').hidden = false;
+  $('keys').hidden = false;
+  $('unauth').hidden = true;
+  $('unauth').replaceChildren();
+}
+
+function keyForm(): HTMLFormElement {
+  const form = h('form', 'keyform');
+  form.noValidate = true;
+  const label = h('label', '', 'Access key');
+  label.htmlFor = 'accessKey';
+  const input = h('input');
+  input.id = 'accessKey';
+  input.type = 'password';
+  input.autocomplete = 'off';
+  input.spellcheck = false;
+  input.maxLength = 200;
+  const msg = h('p', 'meta');
+  msg.id = 'keyMsg';
+  msg.setAttribute('role', 'alert');
+  input.setAttribute('aria-describedby', 'keyMsg');
+  const go = h('button', 'btn btn-primary', 'Unlock');
+  go.type = 'submit';
+  form.append(label, input, go, msg);
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const key = input.value.trim();
+    if (!key) {
+      input.focus();
+      return;
+    }
+    accessKey = key;
+    go.disabled = true;
+    void (async () => {
+      try {
+        const { status, data } = await api<StateResponse & ApiError>('/api/state');
+        if (status === 200 && data) {
+          saveKey(key);
+          showApp();
+          setConnection(true);
+          render(data);
+          numberEl.focus();
+          return;
+        }
+        accessKey = savedKey();
+        msg.textContent =
+          status === 429 ? `Too many wrong keys. Try again in ${data?.retryAfter ?? 'a minute'} seconds.` : status === 401 ? 'That key was not accepted.' : 'The server did not accept the request.';
+        input.select();
+      } catch {
+        accessKey = savedKey();
+        msg.textContent = 'Server unreachable.';
+      } finally {
+        go.disabled = false;
+      }
+    })();
+  });
+  return form;
+}
+
+function showUnauthorised(needsKey: boolean): void {
+  locked = true;
+  if (needsKey) {
+    accessKey = '';
+    saveKey('');
+  }
   $('main').hidden = true;
   $('keys').hidden = true;
   const box = $('unauth');
   box.hidden = false;
-  box.replaceChildren(emptyPanel('Not authorised', 'This server did not accept the request. Check the address you opened, or ask whoever runs it.', { warn: true }));
+  const text = needsKey
+    ? 'This server needs an access key. Ask whoever runs it, or look for ACCESS_KEY in its settings.'
+    : 'This server did not accept the request. Check the address you opened, or ask whoever runs it.';
+  box.replaceChildren(emptyPanel('Not authorised', text, { warn: true }));
+  if (needsKey) {
+    box.querySelector('.empty')?.append(keyForm());
+    box.querySelector<HTMLInputElement>('#accessKey')?.focus();
+  }
   $('conn').dataset.state = 'down';
   $('connText').textContent = 'Not authorised';
 }
@@ -321,6 +425,16 @@ function render(state: StateResponse): void {
     closePairing();
     toast('Phone paired' + (added ? ': ' + added.name : ''));
   }
+  // Someone (another tab, or five wrong guesses) replaced or burned the code this page is still showing.
+  if (
+    !$('pairBox').hidden &&
+    state.pairingExpiresAt !== undefined &&
+    state.pairingExpiresAt !== pairExpires &&
+    Date.now() - pairStartedAt > 4000
+  ) {
+    closePairing();
+    toast('That pairing code no longer works. Make a new one.', 'warn');
+  }
   lastDeviceIds = ids;
   devices = state.devices;
   renderDevices();
@@ -331,15 +445,16 @@ function render(state: StateResponse): void {
 
 let polling = false;
 async function refresh(): Promise<void> {
-  if (polling) return;
+  if (polling || locked) return;
   polling = true;
   try {
     const { status, data } = await api<StateResponse>('/api/state');
     if (status === 401 || status === 403) {
-      showUnauthorised();
+      showUnauthorised(status === 401);
       return;
     }
     if (status === 200 && data) {
+      showApp();
       setConnection(true);
       render(data);
     } else {
@@ -606,6 +721,7 @@ async function unpairDevice(d: DeviceView, opener: HTMLElement): Promise<void> {
   try {
     const { status } = await api('/api/devices/' + encodeURIComponent(d.id), { method: 'DELETE' });
     if (status === 200) toast(`Unpaired ${d.name}.`);
+    else if (status === 404) toast(`${d.name} was already unpaired.`, 'warn');
     else toast(`Could not unpair ${d.name}.`, 'err');
   } catch {
     toast(`Could not unpair ${d.name}: server unreachable.`, 'err');
@@ -619,6 +735,7 @@ async function unpairDevice(d: DeviceView, opener: HTMLElement): Promise<void> {
 // ---- pairing --------------------------------------------------------------------------------
 
 let pairExpires = 0;
+let pairStartedAt = 0;
 let pairTotal = 1;
 let pairTimer: ReturnType<typeof setInterval> | undefined;
 
@@ -655,6 +772,7 @@ async function startPairing(): Promise<void> {
     $('code').textContent = data.code;
     $('addr').textContent = location.host;
     pairExpires = data.expiresAt;
+    pairStartedAt = Date.now();
     pairTotal = Math.max(1, data.expiresAt - Date.now());
     $('pairBox').hidden = false;
     $('pairLabel').textContent = 'New code';

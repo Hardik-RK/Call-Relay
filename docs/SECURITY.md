@@ -6,7 +6,7 @@ A model of who can do what, so you can judge whether the defaults fit your situa
 
 | Actor | Gets | How |
 | --- | --- | --- |
-| Anyone who can reach the server's web API | Can queue calls, mint pairing codes, unpair phones | Nothing by default on loopback. `ACCESS_KEY` header when configured. |
+| Anyone who can reach the server's web API | Can queue calls, mint pairing codes, unpair phones | Nothing by default on loopback. `ACCESS_KEY` (sent as an `x-access-key` header; the page asks for it once and keeps it in that browser's local storage) when configured. |
 | A paired phone | Can fetch its own commands and report on its own calls | Bearer token from pairing. |
 | Anyone else on the network | Can try to pair or hit the API | Needs a live 8-character code; rate limited. |
 
