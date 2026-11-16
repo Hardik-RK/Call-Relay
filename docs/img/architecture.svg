@@ -1,78 +1,85 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 340" width="880" height="340" role="img" aria-labelledby="t d">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 408" width="880" height="408" role="img" aria-labelledby="t d">
   <title id="t">Call-Relay architecture</title>
   <desc id="d">A browser page posts calls to a Node server. The server holds the pairing code and call queue. The Android app long-polls the server, asks the user to confirm with a tap, opens the dialer, and reports the result back.</desc>
   <defs>
-    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="#0a6fc2"/>
+    <pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse">
+      <circle cx="10" cy="10" r="1" fill="#161c23"/>
+    </pattern>
+    <marker id="ah" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="5.5" markerHeight="5.5" markerUnits="strokeWidth" orient="auto-start-reverse">
+      <path d="M0 0.5 L10 5 L0 9.5 z" fill="#00b3f2"/>
     </marker>
     <style>
       .sans{font-family:'Inter Tight',Inter,'Segoe UI',Helvetica,Arial,sans-serif}
       .mono{font-family:'JetBrains Mono',ui-monospace,Consolas,monospace}
-      .card{fill:#ffffff;stroke:#e3e6ea;stroke-width:1}
-      .key{fill:#ffffff;stroke:#0a6fc2;stroke-width:1.5}
-      .h{font-size:14px;font-weight:600;fill:#111827}
-      .s{font-size:12px;fill:#5b6470}
-      .m{font-size:11.5px;fill:#111827}
-      .pill{fill:#e3f1fd}
-      .pt{font-size:11px;fill:#0b4f8a}
-      .ln{stroke:#0a6fc2;stroke-width:1.5;fill:none;marker-end:url(#a)}
+      .cap{font-size:10.5px;font-weight:600;letter-spacing:.16em;fill:#9ba6b1}
+      .h{font-size:14px;font-weight:600;fill:#eceff2}
+      .h2{font-size:13px;font-weight:600;fill:#eceff2}
+      .s{font-size:12px;fill:#9ba6b1}
+      .ms{font-size:12px;fill:#9ba6b1}
+      .lab{font-size:11px;fill:#9ba6b1}
+      .pt{font-size:11px;fill:#8ddafc}
+      .bt{font-size:10.5px;font-weight:600;fill:#8ddafc}
+      .ar{stroke:#00b3f2;stroke-width:1.5;fill:none;stroke-linejoin:round;stroke-linecap:round;marker-end:url(#ah)}
     </style>
   </defs>
-  <rect x="0" y="0" width="880" height="340" rx="12" fill="#ffffff"/>
-
-  <!-- Browser -->
-  <rect class="card" x="24" y="40" width="150" height="96" rx="10"/>
-  <text class="sans h" x="40" y="68">Browser page</text>
-  <text class="sans s" x="40" y="88">static HTML + script</text>
-  <text class="sans s" x="40" y="106">polls state every 2 s</text>
-
-  <!-- Server -->
-  <rect class="key" x="300" y="24" width="290" height="290" rx="10"/>
-  <text class="sans h" x="320" y="54">Node server</text>
-  <rect class="pill" x="470" y="38" width="104" height="22" rx="11"/>
-  <text class="mono pt" x="522" y="53" text-anchor="middle">127.0.0.1:8787</text>
-  <rect class="card" x="320" y="72" width="250" height="52" rx="8"/>
-  <text class="sans m" x="334" y="93">Pairing code</text>
-  <text class="sans s" x="334" y="111">one-time, 10 min, hashed device token</text>
-  <rect class="card" x="320" y="136" width="250" height="164" rx="8"/>
-  <text class="sans m" x="334" y="157">Call queue</text>
-  <text class="sans s" x="334" y="175">number normalised to E.164</text>
-  <rect class="pill" x="334" y="188" width="62" height="22" rx="11"/>
-  <text class="mono pt" x="365" y="203" text-anchor="middle">queued</text>
-  <rect class="pill" x="404" y="188" width="104" height="22" rx="11"/>
-  <text class="mono pt" x="456" y="203" text-anchor="middle">sent_to_phone</text>
-  <rect class="pill" x="334" y="218" width="68" height="22" rx="11"/>
-  <text class="mono pt" x="368" y="233" text-anchor="middle">dialing</text>
-  <rect class="pill" x="410" y="218" width="58" height="22" rx="11"/>
-  <text class="mono pt" x="439" y="233" text-anchor="middle">failed</text>
-  <text class="sans s" x="334" y="262">unconfirmed calls are redelivered</text>
-  <text class="sans s" x="334" y="280">after 20 s</text>
-
-  <!-- Phone -->
-  <rect class="card" x="686" y="40" width="170" height="96" rx="10"/>
-  <text class="sans h" x="702" y="68">Android app</text>
-  <text class="sans s" x="702" y="88">foreground service</text>
-  <text class="sans s" x="702" y="106">no Firebase, no FCM</text>
-
-  <!-- Confirm / dialer -->
-  <rect class="card" x="686" y="200" width="170" height="100" rx="10"/>
-  <text class="sans h" x="702" y="228">You tap Call</text>
-  <text class="sans s" x="702" y="248">then the system dialer</text>
-  <text class="mono s" x="702" y="268">ACTION_CALL / DIAL</text>
-
-  <!-- arrows -->
-  <path class="ln" d="M174 88 H300"/>
-  <rect class="pill" x="181" y="62" width="112" height="20" rx="10"/>
-  <text class="mono pt" x="237" y="76" text-anchor="middle">POST /api/calls</text>
-
-  <path class="ln" d="M686 76 H590"/>
-  <rect class="pill" x="600" y="50" width="80" height="20" rx="10"/>
-  <text class="mono pt" x="640" y="64" text-anchor="middle">long-poll</text>
-
-  <path class="ln" d="M590 116 H686"/>
-  <rect class="pill" x="600" y="124" width="80" height="20" rx="10"/>
-  <text class="mono pt" x="640" y="138" text-anchor="middle">status</text>
-
-  <path class="ln" d="M771 136 V200"/>
-  <text class="sans s" x="781" y="172">confirm</text>
+  <rect width="880" height="408" rx="14" fill="#0a0f14"/>
+  <rect width="880" height="408" rx="14" fill="url(#dots)"/>
+  <text class="sans cap" x="24" y="32">ARCHITECTURE</text>
+  <rect x="24" y="73" width="168" height="96" rx="10" fill="#05080b"/>
+  <rect x="24.5" y="72.5" width="167" height="95" rx="10" fill="#12181e" stroke="#272d34"/>
+  <text class="sans h" x="40" y="100">Browser page</text>
+  <text class="sans s" x="40" y="122">static HTML + script</text>
+  <text class="sans s" x="40" y="140">polls state every 2 s</text>
+  <rect x="320" y="57" width="240" height="320" rx="10" fill="#05080b"/>
+  <rect x="320" y="56" width="240" height="320" rx="10" fill="#12181e" stroke="#00b3f2" stroke-width="1.5"/>
+  <rect x="324" y="70" width="3" height="292" rx="1.5" fill="#00b3f2"/>
+  <text class="sans h" x="336" y="86">Node server</text>
+  <rect x="436" y="70" width="108" height="22" rx="11.0" fill="#003044"/>
+  <text class="mono pt" x="490.0" y="84.8" text-anchor="middle" style="fill:#8ddafc">127.0.0.1:8787</text>
+  <rect x="336" y="108" width="208" height="76" rx="8" fill="#1e232a"/>
+  <text class="sans h2" x="348" y="132">Pairing code</text>
+  <text class="sans s" x="348" y="152">one-time, 10 min,</text>
+  <text class="sans s" x="348" y="168">hashed device token</text>
+  <rect x="336" y="200" width="208" height="160" rx="8" fill="#1e232a"/>
+  <text class="sans h2" x="348" y="224">Call queue</text>
+  <text class="sans s" x="348" y="244">number normalised to E.164</text>
+  <rect x="348" y="256" width="56" height="20" rx="10.0" fill="#2c333b"/>
+  <text class="mono pt" x="376.0" y="269.8" text-anchor="middle" style="fill:#c3cbd3">queued</text>
+  <rect x="410" y="256" width="102" height="20" rx="10.0" fill="#33270f"/>
+  <text class="mono pt" x="461.0" y="269.8" text-anchor="middle" style="fill:#f0ba59">sent_to_phone</text>
+  <rect x="348" y="284" width="62" height="20" rx="10.0" fill="#0f2a1c"/>
+  <text class="mono pt" x="379.0" y="297.8" text-anchor="middle" style="fill:#4ebe7d">dialing</text>
+  <rect x="416" y="284" width="56" height="20" rx="10.0" fill="#341517"/>
+  <text class="mono pt" x="444.0" y="297.8" text-anchor="middle" style="fill:#f36164">failed</text>
+  <text class="sans s" x="348" y="328">unconfirmed calls are</text>
+  <text class="sans s" x="348" y="344">redelivered after 20 s</text>
+  <rect x="680" y="73" width="176" height="96" rx="10" fill="#05080b"/>
+  <rect x="680.5" y="72.5" width="175" height="95" rx="10" fill="#12181e" stroke="#272d34"/>
+  <text class="sans h" x="696" y="100">Android app</text>
+  <text class="sans s" x="696" y="122">foreground service</text>
+  <text class="sans s" x="696" y="140">no Firebase, no FCM</text>
+  <rect x="680" y="233" width="176" height="104" rx="10" fill="#05080b"/>
+  <rect x="680.5" y="232.5" width="175" height="103" rx="10" fill="#12181e" stroke="#272d34"/>
+  <text class="sans h" x="696" y="260">You tap Call</text>
+  <text class="sans s" x="696" y="282">then the system dialer</text>
+  <text class="mono ms" x="696" y="304">ACTION_CALL / DIAL</text>
+  <path class="ar" d="M192 120 H319"/>
+  <rect x="202" y="86" width="108" height="20" rx="10.0" fill="#003044"/>
+  <text class="mono pt" x="256.0" y="99.8" text-anchor="middle" style="fill:#8ddafc">POST /api/calls</text>
+  <circle cx="256" cy="120" r="9" fill="#003044" stroke="#00b3f2" stroke-width="1"/>
+  <text class="sans bt" x="256" y="123.7" text-anchor="middle">1</text>
+  <path class="ar" d="M680 104 H561"/>
+  <rect x="582" y="72" width="76" height="20" rx="10.0" fill="#003044"/>
+  <text class="mono pt" x="620.0" y="85.8" text-anchor="middle" style="fill:#8ddafc">long-poll</text>
+  <circle cx="620" cy="104" r="9" fill="#003044" stroke="#00b3f2" stroke-width="1"/>
+  <text class="sans bt" x="620" y="107.7" text-anchor="middle">2</text>
+  <path class="ar" d="M768 168 V231"/>
+  <circle cx="768" cy="200" r="9" fill="#003044" stroke="#00b3f2" stroke-width="1"/>
+  <text class="sans bt" x="768" y="203.7" text-anchor="middle">3</text>
+  <text class="sans s" x="786" y="204">confirm</text>
+  <path class="ar" d="M680 144 H561"/>
+  <circle cx="620" cy="144" r="9" fill="#003044" stroke="#00b3f2" stroke-width="1"/>
+  <text class="sans bt" x="620" y="147.7" text-anchor="middle">4</text>
+  <rect x="592" y="160" width="56" height="20" rx="10.0" fill="#003044"/>
+  <text class="mono pt" x="620.0" y="173.8" text-anchor="middle" style="fill:#8ddafc">status</text>
 </svg>
