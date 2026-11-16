@@ -365,7 +365,7 @@ function setPreview(kind: '' | 'ok' | 'err', label: string, value: string): void
 
 function resetPreview(): void {
   previewOk = null;
-  setPreview('', mode === 'raw' ? 'Dials exactly' : 'Will dial', 'type or tap a number');
+  setPreview('', '', '');
 }
 
 function updateCallButton(): void {
