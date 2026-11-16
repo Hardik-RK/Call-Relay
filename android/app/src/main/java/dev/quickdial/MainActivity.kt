@@ -2,7 +2,6 @@ package dev.quickdial
 
 import android.Manifest
 import android.content.ActivityNotFoundException
-import android.content.ClipboardManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -258,12 +257,6 @@ class MainActivity : ComponentActivity() {
             onCountry = { country = it; settings.country = it },
             onExactMode = { anyInput = it },
             onNumber = { number = it },
-            onPaste = {
-                val clip = getSystemService(ClipboardManager::class.java).primaryClip
-                val text = clip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this)?.toString().orEmpty()
-                val kept = text.filter { it.isDigit() || it in "+*#-(). " }.trim().take(PhoneNumbers.MAX_DIAL_STRING)
-                if (kept.isEmpty()) scope.launch { toasts.showSnackbar("Nothing to paste.") } else number = kept
-            },
             onCall = { startCall(null, it) },
             onBattery = { open(Intent(AndroidSettings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS), toasts, scope) },
             onFullScreen = if (Build.VERSION.SDK_INT >= 34) {

@@ -69,7 +69,7 @@ fun statusPill(status: String): Pair<String, Tone> = when {
 
 /** Second line under the status headline; avoids repeating the headline word for word. */
 fun statusDetail(status: String): String =
-    if (status.startsWith("Not listening")) "Requests from the web page will not reach this phone." else status
+    if (status.startsWith("Not listening")) "" else status
 
 /** Page chrome: wordmark on the left, optional trailing slot (status pill) on the right. */
 @Composable
@@ -114,7 +114,7 @@ fun PairScreen(
     val c = Qd.colors
     val normalized = remember(url) { ServerUrl.normalize(url) }
     val (urlHelper, urlTone) = when {
-        url.isBlank() -> "Shown next to the pairing code on the web page. Example: 192.168.1.20:8787" to Tone.Neutral
+        url.isBlank() -> "" to Tone.Neutral
         normalized == null -> "That does not look like a server address." to Tone.Danger
         else -> "Will connect to $normalized" to Tone.Success
     }
@@ -127,13 +127,7 @@ fun PairScreen(
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         AppHeader()
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("Pair this phone", style = Qd.type.headline, color = c.fg, modifier = Modifier.semantics { heading() })
-            Text(
-                "Open the web page, press \"Pair a phone\", then enter the server address and the 8-character code it shows.",
-                style = Qd.type.body, color = c.muted,
-            )
-        }
+        Text("Pair this phone", style = Qd.type.headline, color = c.fg, modifier = Modifier.semantics { heading() })
         Panel {
             Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 val urlSource = remember { MutableInteractionSource() }
@@ -231,8 +225,6 @@ private fun PairingCodeField(code: String, helper: String, onCode: (String) -> U
 // Home screen
 // ---------------------------------------------------------------------------------------------
 
-private const val KEYPAD_EXACT_ONLY = "*#"
-
 @Composable
 fun HomeScreen(
     status: String,
@@ -245,7 +237,6 @@ fun HomeScreen(
     onCountry: (Country) -> Unit,
     onExactMode: (Boolean) -> Unit,
     onNumber: (String) -> Unit,
-    onPaste: () -> Unit,
     onCall: (String) -> Unit,
     onBattery: () -> Unit,
     onFullScreen: (() -> Unit)?,
@@ -278,7 +269,7 @@ fun HomeScreen(
                     )
                     Column(Modifier.weight(1f).semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }) {
                         Text(pillText, style = Qd.type.title, color = c.fg)
-                        Text(statusDetail(status), style = Qd.type.label, color = c.muted)
+                        statusDetail(status).takeIf { it.isNotEmpty() }?.let { Text(it, style = Qd.type.label, color = c.muted) }
                     }
                 }
                 Text(
@@ -312,15 +303,7 @@ fun HomeScreen(
         // Dial
         Panel(padding = PaddingValues(14.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                SectionHeader("Call a number") {
-                    Box(
-                        Modifier
-                            .heightIn(min = 48.dp).clip(RoundedCornerShape(QdRadius.control))
-                            .clickable(role = Role.Button, onClick = onPaste)
-                            .padding(horizontal = 10.dp),
-                        contentAlignment = Alignment.Center,
-                    ) { Text("Paste", style = Qd.type.bodyStrong, color = c.accentText) }
-                }
+                SectionHeader("Call a number")
                 SegmentedControl(
                     options = listOf("Number", "Exactly as typed"),
                     selectedIndex = if (exactMode) 1 else 0,
@@ -342,37 +325,39 @@ fun HomeScreen(
                 }
                 Panel(inset = true, padding = PaddingValues(horizontal = 12.dp, vertical = 14.dp)) {
                     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        LedNumber(number, placeholder = if (exactMode) "Dial string" else "Phone number")
+                        DialField(
+                            value = number,
+                            onChange = { onNumber(it.take(PhoneNumbers.MAX_DIAL_STRING)) },
+                            placeholder = if (exactMode) "Dial string" else "Phone number",
+                            exactMode = exactMode,
+                            onGo = { (parsed as? PhoneResult.Ok)?.let { onCall(it.e164) } },
+                        )
                         val (line, tone) = when (parsed) {
                             is PhoneResult.Ok -> (if (exactMode) "Will dial exactly ${parsed.e164}" else "Will dial ${parsed.e164}") to Tone.Success
                             is PhoneResult.Failed -> describe(parsed.reason) to Tone.Danger
-                            null -> (if (exactMode) "Short codes, extensions, * and # are sent as typed." else "Digits are fine. Add + for another country.") to Tone.Neutral
+                            null -> "" to Tone.Neutral
                         }
-                        Text(
-                            line, style = Qd.type.label, textAlign = TextAlign.Center,
-                            color = when (tone) { Tone.Success -> c.successText; Tone.Danger -> c.dangerText; else -> c.muted },
-                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                        )
+                        if (line.isNotEmpty()) {
+                            Text(
+                                line, style = Qd.type.label, textAlign = TextAlign.Center,
+                                color = when (tone) { Tone.Success -> c.successText; Tone.Danger -> c.dangerText; else -> c.muted },
+                                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                            )
+                        }
                     }
                 }
-                Keypad(
-                    exactMode = exactMode,
-                    canCall = parsed is PhoneResult.Ok,
-                    onKey = { if (number.length < PhoneNumbers.MAX_DIAL_STRING) onNumber(number + it) },
-                    onBackspace = { onNumber(number.dropLast(1)) },
-                    onClear = { onNumber("") },
-                    onCall = { (parsed as? PhoneResult.Ok)?.let { onCall(it.e164) } },
+                PrimaryButton(
+                    text = "Call",
+                    onClick = { (parsed as? PhoneResult.Ok)?.let { onCall(it.e164) } },
+                    enabled = parsed is PhoneResult.Ok,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }
 
         // Requests from the web page
         SectionHeader("Requests", Modifier.padding(top = 4.dp))
-        EmptyPanel(
-            title = if (listening) "Waiting for the web page" else "Not receiving requests",
-            body = if (listening) "When you press Call on the web page, a confirmation appears here and as a notification."
-            else "Turn on \"Receive calls from the web page\" to get confirmation prompts here.",
-        )
+        EmptyPanel(title = if (listening) "Waiting for the web page" else "Not receiving requests")
 
         // Reliability
         SectionHeader("Reliability", Modifier.padding(top = 4.dp))
@@ -399,60 +384,39 @@ private fun HairlineDivider() {
     Box(Modifier.fillMaxWidth().height(1.dp).background(Qd.colors.line))
 }
 
-private val PadRows = listOf(
-    listOf("1", "2", "3"), listOf("4", "5", "6"), listOf("7", "8", "9"), listOf("*", "0", "#"),
-)
-
+/** The number being typed: a real text field (system keyboard, paste and IME all work) in the dial display style. */
 @Composable
-private fun Keypad(
-    exactMode: Boolean,
-    canCall: Boolean,
-    onKey: (String) -> Unit,
-    onBackspace: () -> Unit,
-    onClear: () -> Unit,
-    onCall: () -> Unit,
-) {
+private fun DialField(value: String, onChange: (String) -> Unit, placeholder: String, exactMode: Boolean, onGo: () -> Unit) {
     val c = Qd.colors
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        PadRows.forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                row.forEach { key ->
-                    val enabled = exactMode || key !in KEYPAD_EXACT_ONLY.map { it.toString() }
-                    KeypadKey(
-                        label = key,
-                        description = when (key) { "*" -> "star"; "#" -> "hash"; else -> key },
-                        onClick = { onKey(key) },
-                        enabled = enabled,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            KeypadKey("+", "plus", { onKey("+") }, Modifier.weight(1f))
-            KeypadKey(
-                label = "Call", description = if (canCall) "Call" else "Call, unavailable until the number is valid",
-                onClick = onCall, enabled = canCall, modifier = Modifier.weight(1f),
-                container = if (canCall) c.call else c.panel,
-                pressed = c.call.copy(alpha = 0.85f),
-                border = !canCall,
-            ) {
-                Image(
-                    painterResource(R.drawable.ic_call), contentDescription = null, modifier = Modifier.size(24.dp),
-                    colorFilter = ColorFilter.tint(if (canCall) c.onCall else c.faint),
-                )
-            }
-            KeypadKey(
-                label = "", description = "Delete last digit", onClick = onBackspace,
-                onLongClick = onClear, modifier = Modifier.weight(1f),
-            ) {
-                Image(
-                    painterResource(R.drawable.ic_backspace), contentDescription = null, modifier = Modifier.size(24.dp),
-                    colorFilter = ColorFilter.tint(c.fg),
-                )
-            }
-        }
+    val base = Qd.type.ledBig
+    val size = when {
+        value.isEmpty() -> base.fontSize * 0.55f
+        value.length <= 12 -> base.fontSize
+        value.length <= 17 -> base.fontSize * 0.8f
+        value.length <= 22 -> base.fontSize * 0.64f
+        else -> base.fontSize * 0.52f
     }
+    BasicTextField(
+        value = value,
+        onValueChange = onChange,
+        singleLine = true,
+        textStyle = base.copy(fontSize = size, lineHeight = size * 1.25f, color = c.fg, textAlign = TextAlign.Center),
+        cursorBrush = SolidColor(c.primary),
+        keyboardOptions = KeyboardOptions(
+            keyboardType = if (exactMode) KeyboardType.Ascii else KeyboardType.Phone,
+            imeAction = androidx.compose.ui.text.input.ImeAction.Go,
+        ),
+        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onGo = { onGo() }),
+        modifier = Modifier.fillMaxWidth().semantics { contentDescription = placeholder },
+        decorationBox = { inner ->
+            Box(Modifier.fillMaxWidth().heightIn(min = 48.dp), contentAlignment = Alignment.Center) {
+                if (value.isEmpty()) {
+                    Text(placeholder, style = base.copy(fontSize = size, lineHeight = size * 1.25f), color = c.faint, textAlign = TextAlign.Center)
+                }
+                inner()
+            }
+        },
+    )
 }
 
 fun describe(reason: PhoneFailure): String = when (reason) {
@@ -524,13 +488,13 @@ private fun PairDarkPreview() = PreviewPage(true) { PairScreen("", "", null, fal
 @Preview(name = "Home light", widthDp = 360, heightDp = 1100)
 @Composable
 private fun HomeLightPreview() = PreviewPage(false) {
-    HomeScreen("Connected, waiting for calls", "http://192.168.1.20:8787", true, Country.IN, false, "98765 43210", {}, {}, {}, {}, {}, {}, {}, {}, {})
+    HomeScreen("Connected, waiting for calls", "http://192.168.1.20:8787", true, Country.IN, false, "98765 43210", {}, {}, {}, {}, {}, {}, {}, {})
 }
 
 @Preview(name = "Home dark", widthDp = 360, heightDp = 1100)
 @Composable
 private fun HomeDarkPreview() = PreviewPage(true) {
-    HomeScreen("Server unreachable, retrying", "http://192.168.1.20:8787", true, Country.IN, true, "*#06#", {}, {}, {}, {}, {}, {}, {}, {}, {})
+    HomeScreen("Server unreachable, retrying", "http://192.168.1.20:8787", true, Country.IN, true, "*#06#", {}, {}, {}, {}, {}, {}, {}, {})
 }
 
 @Preview(name = "Confirm light", widthDp = 360, heightDp = 420)

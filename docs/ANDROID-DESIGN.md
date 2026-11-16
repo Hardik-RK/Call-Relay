@@ -7,7 +7,7 @@ The app's look follows the layered, cool-neutral language of the author's other 
 | File | What it holds |
 |---|---|
 | `ui/Theme.kt` | Colour tokens (light and dark, follows the system), radii (10 / 12 / 14 dp), the type scale, fonts, the Material theme mapping |
-| `ui/Components.kt` | `Panel`, `SectionHeader`, `PrimaryButton`, `SecondaryButton`, `StatusPill`, `SegmentedControl`, `ChoiceChip`, `KeypadKey`, `LedNumber`, `EmptyPanel`, `QdToastHost`, `FieldFrame` |
+| `ui/Components.kt` | `Panel`, `SectionHeader`, `PrimaryButton`, `SecondaryButton`, `StatusPill`, `SegmentedControl`, `ChoiceChip`, `LedNumber`, `EmptyPanel`, `QdToastHost`, `FieldFrame` |
 | `ui/Screens.kt` | Stateless `PairScreen`, `HomeScreen`, `ConfirmCallDialog`, plus `@Preview` functions in light and dark |
 | `MainActivity.kt` | Holds state and behaviour (permissions, dialer, pairing) and feeds the screens |
 

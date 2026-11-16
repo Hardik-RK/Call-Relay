@@ -275,49 +275,6 @@ fun ChoiceChip(text: String, selected: Boolean, onClick: () -> Unit, description
     }
 }
 
-/** One key of the dial pad: a big mono glyph, optionally with a small letters hint. */
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun KeypadKey(
-    label: String,
-    description: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    hint: String? = null,
-    enabled: Boolean = true,
-    onLongClick: (() -> Unit)? = null,
-    container: Color = Qd.colors.panel,
-    pressed: Color = Qd.colors.hover.compositeOver(Qd.colors.panel),
-    contentColor: Color = Qd.colors.fg,
-    border: Boolean = true,
-    content: (@Composable () -> Unit)? = null,
-) {
-    val c = Qd.colors
-    val source = remember { MutableInteractionSource() }
-    val isPressed by source.collectIsPressedAsState()
-    val shape = RoundedCornerShape(QdRadius.panel)
-    Box(
-        modifier
-            .heightIn(min = 56.dp)
-            .clip(shape)
-            .background(if (isPressed && enabled) pressed else container)
-            .then(if (border) Modifier.border(1.dp, c.line, shape) else Modifier)
-            .combinedClickable(
-                interactionSource = source, indication = null, enabled = enabled, role = Role.Button,
-                onClick = onClick, onLongClick = onLongClick,
-                onLongClickLabel = null,
-            )
-            .semantics { contentDescription = description },
-        contentAlignment = Alignment.Center,
-    ) {
-        val ink = if (enabled) contentColor else c.faint
-        if (content != null) content() else Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(label, style = Qd.type.led.copy(fontSize = 24.sp, lineHeight = 28.sp, letterSpacing = 0.sp), color = ink)
-            if (hint != null) Text(hint, style = Qd.type.monoSmall.copy(fontSize = 9.sp, lineHeight = 10.sp), color = c.muted)
-        }
-    }
-}
-
 /**
  * The dial display: fixed-width mono digits that shrink to fit. It is the app's stand-in for the web
  * UI's dot-matrix numerals (that face is not bundled here), kept in a dark-on-light "readout" well.
@@ -363,12 +320,12 @@ fun String.toSpokenDigits(): String = map {
 
 /** A calm placeholder for a section with nothing in it yet. */
 @Composable
-fun EmptyPanel(title: String, body: String, modifier: Modifier = Modifier) {
+fun EmptyPanel(title: String, body: String = "", modifier: Modifier = Modifier) {
     val c = Qd.colors
     Panel(modifier, inset = true) {
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(title, style = Qd.type.bodyStrong, color = c.fg, textAlign = TextAlign.Center)
-            Text(body, style = Qd.type.label, color = c.muted, textAlign = TextAlign.Center)
+            if (body.isNotEmpty()) Text(body, style = Qd.type.label, color = c.muted, textAlign = TextAlign.Center)
         }
     }
 }
