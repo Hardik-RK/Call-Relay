@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 340" width="880" height="340" role="img" aria-labelledby="t d">
+  <title id="t">Fcm-Calling architecture</title>
+  <desc id="d">A browser page posts calls to a Node server. The server holds the pairing code and call queue. The Android app long-polls the server, asks the user to confirm with a tap, opens the dialer, and reports the result back.</desc>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0a6fc2"/>
+    </marker>
+    <style>
+      .sans{font-family:'Inter Tight',Inter,'Segoe UI',Helvetica,Arial,sans-serif}
+      .mono{font-family:'JetBrains Mono',ui-monospace,Consolas,monospace}
+      .card{fill:#ffffff;stroke:#e3e6ea;stroke-width:1}
+      .key{fill:#ffffff;stroke:#0a6fc2;stroke-width:1.5}
+      .h{font-size:14px;font-weight:600;fill:#111827}
+      .s{font-size:12px;fill:#5b6470}
+      .m{font-size:11.5px;fill:#111827}
+      .pill{fill:#e3f1fd}
+      .pt{font-size:11px;fill:#0b4f8a}
+      .ln{stroke:#0a6fc2;stroke-width:1.5;fill:none;marker-end:url(#a)}
+    </style>
+  </defs>
+  <rect x="0" y="0" width="880" height="340" rx="12" fill="#ffffff"/>
+
+  <!-- Browser -->
+  <rect class="card" x="24" y="40" width="150" height="96" rx="10"/>
+  <text class="sans h" x="40" y="68">Browser page</text>
+  <text class="sans s" x="40" y="88">static HTML + script</text>
+  <text class="sans s" x="40" y="106">polls state every 2 s</text>
+
+  <!-- Server -->
+  <rect class="key" x="300" y="24" width="290" height="290" rx="10"/>
+  <text class="sans h" x="320" y="54">Node server</text>
+  <rect class="pill" x="470" y="38" width="104" height="22" rx="11"/>
+  <text class="mono pt" x="522" y="53" text-anchor="middle">127.0.0.1:8787</text>
+  <rect class="card" x="320" y="72" width="250" height="52" rx="8"/>
+  <text class="sans m" x="334" y="93">Pairing code</text>
+  <text class="sans s" x="334" y="111">one-time, 10 min, hashed device token</text>
+  <rect class="card" x="320" y="136" width="250" height="164" rx="8"/>
+  <text class="sans m" x="334" y="157">Call queue</text>
+  <text class="sans s" x="334" y="175">number normalised to E.164</text>
+  <rect class="pill" x="334" y="188" width="62" height="22" rx="11"/>
+  <text class="mono pt" x="365" y="203" text-anchor="middle">queued</text>
+  <rect class="pill" x="404" y="188" width="104" height="22" rx="11"/>
+  <text class="mono pt" x="456" y="203" text-anchor="middle">sent_to_phone</text>
+  <rect class="pill" x="334" y="218" width="68" height="22" rx="11"/>
+  <text class="mono pt" x="368" y="233" text-anchor="middle">dialing</text>
+  <rect class="pill" x="410" y="218" width="58" height="22" rx="11"/>
+  <text class="mono pt" x="439" y="233" text-anchor="middle">failed</text>
+  <text class="sans s" x="334" y="262">unconfirmed calls are redelivered</text>
+  <text class="sans s" x="334" y="280">after 20 s</text>
+
+  <!-- Phone -->
+  <rect class="card" x="686" y="40" width="170" height="96" rx="10"/>
+  <text class="sans h" x="702" y="68">Android app</text>
+  <text class="sans s" x="702" y="88">foreground service</text>
+  <text class="sans s" x="702" y="106">no Firebase, no FCM</text>
+
+  <!-- Confirm / dialer -->
+  <rect class="card" x="686" y="200" width="170" height="100" rx="10"/>
+  <text class="sans h" x="702" y="228">You tap Call</text>
+  <text class="sans s" x="702" y="248">then the system dialer</text>
+  <text class="mono s" x="702" y="268">ACTION_CALL / DIAL</text>
+
+  <!-- arrows -->
+  <path class="ln" d="M174 88 H300"/>
+  <rect class="pill" x="181" y="62" width="112" height="20" rx="10"/>
+  <text class="mono pt" x="237" y="76" text-anchor="middle">POST /api/calls</text>
+
+  <path class="ln" d="M686 76 H590"/>
+  <rect class="pill" x="600" y="50" width="80" height="20" rx="10"/>
+  <text class="mono pt" x="640" y="64" text-anchor="middle">long-poll</text>
+
+  <path class="ln" d="M590 116 H686"/>
+  <rect class="pill" x="600" y="124" width="80" height="20" rx="10"/>
+  <text class="mono pt" x="640" y="138" text-anchor="middle">status</text>
+
+  <path class="ln" d="M771 136 V200"/>
+  <text class="sans s" x="781" y="172">confirm</text>
+</svg>
