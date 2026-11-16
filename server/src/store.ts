@@ -36,6 +36,7 @@ const CODE_TTL_MS = 10 * 60 * 1000;
 const MAX_CODE_FAILURES = 5;
 const MAX_CALLS_KEPT = 100;
 const NO_RESPONSE_MS = 5 * 60 * 1000;
+const REDELIVER_AFTER_MS = 20 * 1000;
 export const ONLINE_WINDOW_MS = 60 * 1000;
 
 const sha256 = (s: string) => createHash('sha256').update(s).digest();
@@ -62,6 +63,8 @@ interface Persisted {
 export class Store extends EventEmitter {
   private devices = new Map<string, Device>();
   private calls: Call[] = [];
+  /** When each call was last handed to its phone (memory only; after a restart a repeat is allowed at once). */
+  private readonly lastDelivered = new Map<string, number>();
   private pairing: { raw: string; expiresAt: number; failures: number } | null = null;
 
   private readonly file: string | null;
@@ -177,13 +180,23 @@ export class Store extends EventEmitter {
     return call;
   }
 
-  /** Hands queued calls to the phone and records that they were delivered. */
+  /**
+   * Hands queued calls to the phone and records that they were delivered. A call that was delivered but
+   * never reported on is handed over again after REDELIVER_AFTER_MS, because the response that carried it
+   * may have died on the way (a phone switching between Wi-Fi and mobile data often loses it silently). The
+   * phone drops commands it has already seen by id, so a repeat is harmless.
+   */
   takeQueued(deviceId: string): Call[] {
     this.sweep();
-    const taken = this.calls.filter((c) => c.deviceId === deviceId && c.state === 'queued');
-    for (const c of taken) this.setState(c, 'sent_to_phone');
-    if (taken.length) this.save();
-    return taken;
+    const t = this.now();
+    const fresh = this.calls.filter((c) => c.deviceId === deviceId && c.state === 'queued');
+    const again = this.calls.filter(
+      (c) => c.deviceId === deviceId && c.state === 'sent_to_phone' && t - (this.lastDelivered.get(c.id) ?? c.updatedAt) >= REDELIVER_AFTER_MS,
+    );
+    for (const c of fresh) this.setState(c, 'sent_to_phone');
+    for (const c of [...fresh, ...again]) this.lastDelivered.set(c.id, t);
+    if (fresh.length) this.save();
+    return [...fresh, ...again];
   }
 
   /** Phone-reported progress. Only sent_to_phone can move on, and only to dialing or failed. */

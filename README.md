@@ -146,7 +146,7 @@ Short version: the phone receives commands reliably only while the foreground se
 
 | Suite | Command | Count |
 | --- | --- | --- |
-| Server (node:test): phone table, limiter, config, store, HTTP API | `cd server && npm test` | 138 |
+| Server (node:test): phone table, limiter, config, store, HTTP API | `cd server && npm test` | 140 |
 | Android (JUnit): shared phone table, command parser, server URL, status mapping | `cd android && ./gradlew testDebugUnitTest` | 26 |
 
 CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) typechecks and tests the server, then runs Android unit tests, lint and `assembleDebug`, and uploads the debug APK.

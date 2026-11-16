@@ -62,6 +62,35 @@ test('normalizeCode strips noise', () => {
   assert.equal(normalizeCode(' ab-cd 12 '), 'ABCD12');
 });
 
+test('a delivered call is handed over again after 20 s if the phone never reports (the first response may have been lost)', () => {
+  const { store, clock } = fixture();
+  const { device } = pair(store);
+  const call = store.createCall(device.id, E, D);
+  assert.equal(store.takeQueued(device.id).length, 1);
+  clock.advance(19_000);
+  assert.equal(store.takeQueued(device.id).length, 0, 'not repeated straight away (no busy polling)');
+  clock.advance(1_001);
+  const again = store.takeQueued(device.id);
+  assert.deepEqual(again.map((c) => c.id), [call.id]);
+  assert.equal(again[0]!.state, 'sent_to_phone', 'a repeat does not change the state');
+  assert.equal(store.takeQueued(device.id).length, 0, 'the repeat restarts the 20 s wait');
+  assert.notEqual(store.report(device.id, call.id, 'dialing'), 'conflict');
+  clock.advance(60_000);
+  assert.equal(store.takeQueued(device.id).length, 0, 'a reported call is never handed over again');
+});
+
+test('an unreported call still fails after five minutes however often it was repeated', () => {
+  const { store, clock } = fixture();
+  const { device } = pair(store);
+  store.createCall(device.id, E, D);
+  for (let i = 0; i < 20; i++) {
+    store.takeQueued(device.id);
+    clock.advance(21_000);
+  }
+  assert.equal(store.recent()[0]!.state, 'failed');
+  assert.equal(store.recent()[0]!.reason, 'no response from phone');
+});
+
 test('call lifecycle: queued, sent_to_phone, dialing', () => {
   const { store } = fixture();
   const { device } = pair(store);
@@ -70,7 +99,7 @@ test('call lifecycle: queued, sent_to_phone, dialing', () => {
   const taken = store.takeQueued(device.id);
   assert.equal(taken.length, 1);
   assert.equal(taken[0]!.state, 'sent_to_phone');
-  assert.equal(store.takeQueued(device.id).length, 0, 'delivered once only');
+  assert.equal(store.takeQueued(device.id).length, 0, 'not repeated straight away');
   const r = store.report(device.id, call.id, 'dialing');
   assert.notEqual(r, 'conflict');
   assert.equal(store.recent()[0]!.state, 'dialing');
