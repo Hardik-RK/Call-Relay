@@ -40,7 +40,6 @@
     <main class="grid is-loading" id="main">
       <section class="col-call" aria-labelledby="callTitle">
         <div class="sec-head"><h1 class="sec-title" id="callTitle">Call</h1><span class="sec-lead" aria-hidden="true"></span></div>
-        <p class="sec-desc">Type a number here. Your paired phone asks you to confirm, then dials it.</p>
 
         <form id="dialForm" novalidate autocomplete="off">
           <div class="seg" id="modeSeg" role="radiogroup" aria-label="Dial mode" data-value="number">
@@ -48,19 +47,16 @@
             <button type="button" role="radio" aria-checked="true" data-mode="number" tabindex="0">Number</button>
             <button type="button" role="radio" aria-checked="false" data-mode="raw" tabindex="-1">Exactly as typed</button>
           </div>
-          <p class="seg-note" id="modeNote">Checked and formatted before it is sent to your phone.</p>
 
           <label class="sr-only" for="number">Phone number</label>
           <div class="display texture" id="display">
-            <input id="number" class="led-num" type="text" inputmode="none" enterkeyhint="go" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="32" placeholder="Enter a number" aria-describedby="preview">
+            <input id="number" class="led-num" type="text" inputmode="tel" enterkeyhint="go" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="32" placeholder="Enter a number" aria-describedby="preview">
             <button class="btn btn-icon btn-bare" id="backBtn" type="button" aria-label="Delete last character" title="Backspace"><svg class="icon" aria-hidden="true"><use href="#i-back"/></svg></button>
           </div>
 
           <div class="preview" id="preview" role="status" aria-live="polite" data-kind="">
             <span class="pv-label"></span><span class="pv-value"></span>
           </div>
-
-          <div class="keypad" id="keypad" role="group" aria-label="Keypad"></div>
 
           <div class="field-row" id="deviceRow" hidden>
             <label for="device">From phone</label>

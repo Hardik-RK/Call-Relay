@@ -194,7 +194,8 @@ function dotMark(warn = false): SVGSVGElement {
 function emptyPanel(title: string, text: string, opts: { warn?: boolean; action?: HTMLElement } = {}): HTMLElement {
   const box = h('div', 'empty');
   if (opts.warn) box.setAttribute('role', 'alert');
-  box.append(dotMark(opts.warn), h('h3', '', title), h('p', '', text));
+  box.append(dotMark(opts.warn), h('h3', '', title));
+  if (text) box.append(h('p', '', text));
   if (opts.action) box.append(opts.action);
   return box;
 }
@@ -260,7 +261,7 @@ function renderDevices(): void {
     const pair = h('button', 'btn btn-primary', 'Pair a phone');
     pair.type = 'button';
     pair.addEventListener('click', () => void startPairing());
-    none.append(emptyPanel('No phone paired', 'Pair your phone once, then every call you place here shows up on it for confirmation.', { action: pair }));
+    none.append(emptyPanel('No phone paired', '', { action: pair }));
   }
 
   const sel = $<HTMLSelectElement>('device');
@@ -280,7 +281,7 @@ function renderCalls(calls: CallView[]): void {
   const none = $('noCalls');
   none.hidden = calls.length > 0;
   if (!none.hidden && none.childElementCount === 0) {
-    none.append(emptyPanel('No calls yet', 'Numbers you send to your phone are listed here with their progress.'));
+    none.append(emptyPanel('No calls yet', ''));
   }
   if (sig === callSig) return;
   callSig = sig;
@@ -417,34 +418,9 @@ function setMode(next: Mode, focus = false): void {
     b.tabIndex = on ? 0 : -1;
     if (on && focus) b.focus();
   });
-  $('modeNote').textContent =
-    next === 'raw'
-      ? 'Nothing is checked or reformatted: short codes, extensions, *# and pauses all go through. Your phone still asks you to confirm.'
-      : 'Checked and formatted before it is sent to your phone.';
+  numberEl.inputMode = next === 'raw' ? 'text' : 'tel';
   numberEl.placeholder = next === 'raw' ? 'e.g. 112, *#06#, 1800123456,,1' : 'Enter a number';
-  renderKeypad();
   preview();
-}
-
-const KEYS: Record<Mode, string[]> = {
-  number: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '0', '⌫'],
-  raw: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'],
-};
-const KEY_NAME: Record<string, string> = { '+': 'plus', '*': 'star', '#': 'hash', '⌫': 'delete' };
-
-function renderKeypad(): void {
-  const pad = $('keypad');
-  pad.replaceChildren();
-  for (const k of KEYS[mode]) {
-    const b = h('button', 'key' + (/\d/.test(k) ? '' : ' sym'), k);
-    b.type = 'button';
-    b.dataset.key = k;
-    b.setAttribute('aria-label', KEY_NAME[k] ?? k);
-    // Keep the caret in the field: a button click must not steal focus away from it.
-    b.addEventListener('mousedown', (e) => e.preventDefault());
-    b.addEventListener('click', () => (k === '⌫' ? backspace() : insert(k)));
-    pad.append(b);
-  }
 }
 
 function insert(text: string): void {
@@ -474,14 +450,6 @@ function clearField(): void {
   if (!numberEl.value) return;
   numberEl.value = '';
   preview();
-}
-
-function flashKey(key: string): void {
-  const k = key === 'Backspace' ? '⌫' : key;
-  const el = $('keypad').querySelector<HTMLElement>(`[data-key="${CSS.escape(k)}"]`);
-  if (!el) return;
-  el.classList.add('is-down');
-  setTimeout(() => el.classList.remove('is-down'), 110);
 }
 
 async function submitCall(): Promise<void> {
@@ -741,7 +709,6 @@ $('pairClose').addEventListener('click', () => {
 numberEl.addEventListener('keydown', (e) => {
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   if (e.key === 'Escape') clearField();
-  else if (e.key.length === 1 || e.key === 'Backspace') flashKey(e.key);
 });
 
 document.addEventListener('keydown', (e) => {
@@ -768,12 +735,10 @@ document.addEventListener('keydown', (e) => {
     numberEl.focus();
     numberEl.setSelectionRange(numberEl.value.length, numberEl.value.length);
     insert(e.key);
-    flashKey(e.key);
   } else if (e.key === 'Backspace') {
     e.preventDefault();
     numberEl.focus();
     backspace();
-    flashKey(e.key);
   } else if (e.key === 'Escape') {
     clearField();
   } else if (e.key === 'Enter' && !t.closest('button, a')) {

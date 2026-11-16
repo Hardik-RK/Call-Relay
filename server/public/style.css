@@ -2,7 +2,7 @@
    Tokens are OKLCH channel triples used as oklch(var(--x)). Layers: base < panel < raised, with an inset well
    for fields. Depth comes from hairlines and shadows. Motion is transform/opacity only. */
 
-/* Bitcount Grid Single is SIL OFL 1.1: licence in /fonts/OFL.txt. Used for the dial display and keypad numerals only. */
+/* Bitcount Grid Single is SIL OFL 1.1: licence in /fonts/OFL.txt. Used for the dial display only. */
 @font-face {
   font-family: "Bitcount Grid Single";
   font-style: normal;
@@ -152,7 +152,6 @@ svg { flex-shrink: 0; }
 .sec-head { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; min-height: 32px; }
 .sec-title { font-size: 1.0625rem; line-height: 1.3; font-weight: 650; letter-spacing: -0.02em; white-space: nowrap; }
 .sec-lead { flex: 1; height: 2px; min-width: 16px; background: oklch(var(--dot-rule)); -webkit-mask: var(--dot-h) repeat-x; mask: var(--dot-h) repeat-x; }
-.sec-desc { margin-bottom: 16px; font-size: 0.8125rem; color: oklch(var(--muted)); }
 .section .sec-head { margin-bottom: 12px; }
 .eyebrow { font-size: 0.75rem; font-weight: 500; color: oklch(var(--muted)); }
 .meta { font-size: 0.75rem; color: oklch(var(--muted)); }
@@ -215,7 +214,6 @@ kbd {
 .seg button { position: relative; z-index: 1; height: 30px; padding: 0 12px; border: 0; border-radius: 6px; background: none; color: oklch(var(--muted)); font-size: 0.8125rem; font-weight: 500; cursor: pointer; }
 .seg button:hover { color: oklch(var(--fg)); }
 .seg button[aria-checked="true"] { color: oklch(var(--fg)); font-weight: 600; }
-.seg-note { margin: 8px 2px 14px; font-size: 0.75rem; color: oklch(var(--muted)); min-height: 1.5em; }
 
 /* Display: inset well with dot texture and an LED numeral */
 .display { position: relative; display: flex; align-items: center; gap: 4px; height: 64px; padding: 0 6px 0 16px; border-radius: 10px; background: oklch(var(--inset)); box-shadow: var(--inset-shadow); }
@@ -239,16 +237,6 @@ kbd {
 .preview[data-kind="err"] .pv-label::before { background: oklch(var(--danger)); }
 
 /* Keypad */
-.keypad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.key {
-  height: 56px; border: 0; border-radius: 10px; background: oklch(var(--raised)); cursor: pointer;
-  box-shadow: inset 0 0 0 1px oklch(var(--line-strong)), 0 1px 2px oklch(0 0 0 / 0.06);
-  font-family: var(--font-led); font-variation-settings: "ELSH" 100; font-weight: 420; font-size: 1.5rem; line-height: 1;
-  transition: transform 100ms var(--ease), background-color 100ms var(--ease);
-}
-.key:hover { background-color: oklch(var(--inset)); }
-.key:active, .key.is-down { transform: scale(0.96); background-color: oklch(var(--accent-soft)); box-shadow: inset 0 0 0 1px oklch(var(--accent-text) / 0.4); }
-.key.sym { color: oklch(var(--muted)); }
 
 .field-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; font-size: 0.8125rem; font-weight: 500; }
 .sel { position: relative; display: inline-flex; min-width: 0; flex: 1; max-width: 220px; }
@@ -351,7 +339,6 @@ kbd {
   .btn-icon { width: 44px; }
   .seg button { height: 44px; }
   .display { height: 68px; }
-  .key { height: 56px; }
   .select { height: 44px; }
   .rows > li { min-height: 60px; }
   .toasts { left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); align-items: stretch; }
