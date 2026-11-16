@@ -1,8 +1,8 @@
-# Fcm-Calling
+# Call-Relay
 
 Type a phone number on a web page. Your paired Android phone asks you to confirm, then dials it.
 
-Despite the repo name, this does not use Firebase Cloud Messaging or any Google service. The phone long-polls the server instead.
+There is no Firebase or Google service involved: the phone long-polls the server.
 
 It is a small personal project: a Node server, one static page, and a Kotlin / Jetpack Compose app. No accounts, no cloud; it runs on your own machine.
 

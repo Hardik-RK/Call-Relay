@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 340" width="880" height="340" role="img" aria-labelledby="t d">
-  <title id="t">Fcm-Calling architecture</title>
+  <title id="t">Call-Relay architecture</title>
   <desc id="d">A browser page posts calls to a Node server. The server holds the pairing code and call queue. The Android app long-polls the server, asks the user to confirm with a tap, opens the dialer, and reports the result back.</desc>
   <defs>
     <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
